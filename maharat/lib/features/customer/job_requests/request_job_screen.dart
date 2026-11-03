@@ -241,16 +241,24 @@ class _RequestJobScreenState extends State<RequestJobScreen> {
                                   color: AppColors.primary,
                                 ),
                                 const SizedBox(width: 6),
-                                Text(
-                                  'Voice Note Recorded (0:${_recordingSeconds.toString().padLeft(2, '0')})',
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.darkGreen,
+                                Expanded(
+                                  child: Text(
+                                    'Voice Note Recorded (0:${_recordingSeconds.toString().padLeft(2, '0')})',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.darkGreen,
+                                    ),
                                   ),
                                 ),
-                                const Spacer(),
                                 IconButton(
+                                  constraints: const BoxConstraints(
+                                    minWidth: 40,
+                                    minHeight: 40,
+                                  ),
+                                  padding: EdgeInsets.zero,
                                   icon: const Icon(
                                     Icons.delete_outline_rounded,
                                     color: AppColors.secondaryText,

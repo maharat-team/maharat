@@ -62,6 +62,7 @@ class _MyRequestsTabState extends State<MyRequestsTab>
         ],
         bottom: TabBar(
           controller: _tabController,
+          isScrollable: true,
           labelColor: AppColors.primary,
           unselectedLabelColor: AppColors.secondaryText,
           indicatorColor: AppColors.primary,

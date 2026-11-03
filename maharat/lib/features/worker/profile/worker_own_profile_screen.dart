@@ -98,12 +98,16 @@ class WorkerOwnProfileScreen extends StatelessWidget {
                         children: [
                           Icon(Icons.verified_user_rounded, color: AppColors.primary, size: 20),
                           SizedBox(width: 8),
-                          Text(
-                            'CNIC Verified Status: Active',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.darkGreen,
+                          Expanded(
+                            child: Text(
+                              'CNIC Verified Status: Active',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.darkGreen,
+                              ),
                             ),
                           ),
                         ],
@@ -188,12 +192,19 @@ class WorkerOwnProfileScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              review.customerName,
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                            Expanded(
+                              child: Text(
+                                review.customerName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
+                            const SizedBox(width: 8),
                             Text(
                               '${review.rating} ★',
                               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.ratingAccent),

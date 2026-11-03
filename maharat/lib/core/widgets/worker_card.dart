@@ -131,40 +131,48 @@ class WorkerCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          Row(
+                          Wrap(
+                            spacing: 4,
+                            runSpacing: 2,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
-                              const Icon(
-                                Icons.star_rounded,
-                                size: 16,
-                                color: AppColors.ratingAccent,
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.star_rounded,
+                                    size: 16,
+                                    color: AppColors.ratingAccent,
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    '${worker.rating}',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.primaryText,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    '(${worker.reviewCount})',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.secondaryText,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 2),
-                              Text(
-                                '${worker.rating}',
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primaryText,
-                                ),
-                              ),
-                              const SizedBox(width: 2),
-                              Text(
-                                ' (${worker.reviewCount})',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.secondaryText,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
                               const Text(
                                 '•',
                                 style: TextStyle(
                                   color: AppColors.secondaryText,
                                 ),
                               ),
-                              const SizedBox(width: 8),
                               Text(
                                 '${worker.experienceYears} yrs exp',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   fontSize: 12,
                                   color: AppColors.secondaryText,
@@ -180,46 +188,48 @@ class WorkerCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 const Divider(height: 1, color: AppColors.border),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.location_on_outlined,
-                                size: 14,
-                                color: AppColors.secondaryText,
-                              ),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  worker.neighbourhood,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.secondaryText,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final details = Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.location_on_outlined,
+                              size: 14,
+                              color: AppColors.secondaryText,
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                worker.neighbourhood,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.secondaryText,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.payments_outlined,
-                                size: 14,
-                                color: AppColors.secondaryText,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.payments_outlined,
+                              size: 14,
+                              color: AppColors.secondaryText,
+                            ),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
                                 worker.visitFee == 0
                                     ? 'Free Visit'
                                     : 'Visit Fee: Rs. ${worker.visitFee}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
@@ -228,68 +238,89 @@ class WorkerCard extends StatelessWidget {
                                       : AppColors.primaryText,
                                 ),
                               ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // Quick WhatsApp button
-                    InkWell(
-                      onTap: onWhatsAppTap,
-                      borderRadius: BorderRadius.circular(10),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.whatsappGreen.withAlpha(20),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: AppColors.whatsappGreen.withAlpha(80),
-                          ),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.chat_bubble_outline_rounded,
-                              size: 16,
-                              color: AppColors.whatsappGreen,
-                            ),
-                            SizedBox(width: 4),
-                            Text(
-                              'WhatsApp',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.whatsappGreen,
-                              ),
                             ),
                           ],
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    // Quick Call button
-                    InkWell(
-                      onTap: onCallTap,
-                      borderRadius: BorderRadius.circular(10),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
+                      ],
+                    );
+                    final actions = Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        InkWell(
+                          onTap: onWhatsAppTap,
                           borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.whatsappGreen.withAlpha(20),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: AppColors.whatsappGreen.withAlpha(80),
+                              ),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.chat_bubble_outline_rounded,
+                                  size: 16,
+                                  color: AppColors.whatsappGreen,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'WhatsApp',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.whatsappGreen,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.call_outlined,
-                          size: 18,
-                          color: AppColors.white,
+                        const SizedBox(width: 6),
+                        InkWell(
+                          onTap: onCallTap,
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.call_outlined,
+                              size: 18,
+                              color: AppColors.white,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  ],
+                      ],
+                    );
+
+                    if (constraints.maxWidth < 360) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          details,
+                          const SizedBox(height: 8),
+                          Align(alignment: Alignment.centerRight, child: actions),
+                        ],
+                      );
+                    }
+
+                    return Row(
+                      children: [
+                        Expanded(child: details),
+                        const SizedBox(width: 8),
+                        actions,
+                      ],
+                    );
+                  },
                 ),
               ],
             ),

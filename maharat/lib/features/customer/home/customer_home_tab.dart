@@ -37,22 +37,26 @@ class CustomerHomeTab extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header & Greeting
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final greeting = Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          Text(
-                            'Assalam o Alaikum ',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: AppColors.secondaryText,
+                          Flexible(
+                            child: Text(
+                              'Assalam o Alaikum',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: AppColors.secondaryText,
+                              ),
                             ),
                           ),
-                          Text(
+                          const SizedBox(width: 6),
+                          const Text(
                             'السلام علیکم',
                             style: TextStyle(
                               fontSize: 14,
@@ -66,6 +70,8 @@ class CustomerHomeTab extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         user.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
@@ -73,9 +79,8 @@ class CustomerHomeTab extends StatelessWidget {
                         ),
                       ),
                     ],
-                  ),
-                  // Location Pill
-                  Container(
+                  );
+                  final locationPill = Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
                       vertical: 8,
@@ -94,18 +99,46 @@ class CustomerHomeTab extends StatelessWidget {
                           color: AppColors.primary,
                         ),
                         const SizedBox(width: 4),
-                        Text(
-                          user.neighbourhood,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primaryText,
+                        ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: constraints.maxWidth * 0.55,
+                          ),
+                          child: Text(
+                            user.neighbourhood,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primaryText,
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ],
+                  );
+
+                  if (constraints.maxWidth < 380) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        greeting,
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: locationPill,
+                        ),
+                      ],
+                    );
+                  }
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(child: greeting),
+                      locationPill,
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 20),
 
@@ -161,14 +194,19 @@ class CustomerHomeTab extends StatelessWidget {
                             ],
                           ),
                         ),
-                        const Spacer(),
-                        const Text(
-                          'بہاولپور',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.lightMint,
-                            fontFamily: 'NotoSansArabic',
+                        const SizedBox(width: 8),
+                        const Flexible(
+                          child: Text(
+                            'بہاولپور',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.end,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.lightMint,
+                              fontFamily: 'NotoSansArabic',
+                            ),
                           ),
                         ),
                       ],
@@ -252,78 +290,86 @@ class CustomerHomeTab extends StatelessWidget {
                 onActionPressed: onNavigateToFind,
               ),
               const SizedBox(height: 8),
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 0.95,
-                ),
-                itemCount: AppConstants.categories.length,
-                itemBuilder: (context, index) {
-                  final category = AppConstants.categories[index];
-                  return GestureDetector(
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => RequestJobScreen(
-                            initialCategory: category.nameEn,
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  return GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: constraints.maxWidth < 300 ? 2 : 3,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: constraints.maxWidth < 300 ? 1.1 : 0.95,
+                    ),
+                    itemCount: AppConstants.categories.length,
+                    itemBuilder: (context, index) {
+                      final category = AppConstants.categories[index];
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => RequestJobScreen(
+                                initialCategory: category.nameEn,
+                              ),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: AppColors.border),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: AppColors.shadow,
+                                blurRadius: 4,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: category.color.withAlpha(20),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  category.icon,
+                                  size: 26,
+                                  color: category.color,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                category.nameEn,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primaryText,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                category.nameUrdu,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: AppColors.secondaryText,
+                                  fontFamily: 'NotoSansArabic',
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       );
                     },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.white,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: AppColors.border),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: AppColors.shadow,
-                            blurRadius: 4,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: category.color.withAlpha(20),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              category.icon,
-                              size: 26,
-                              color: category.color,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            category.nameEn,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primaryText,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            category.nameUrdu,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: AppColors.secondaryText,
-                              fontFamily: 'NotoSansArabic',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                   );
                 },
               ),

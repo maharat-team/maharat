@@ -4,7 +4,7 @@ class UserProfileModel {
   final String name;
   final String phone;
   final UserRole userRole;
-  final String language; // "English", "Urdu", "Roman Urdu"
+  final String language; // "English" or "Urdu"
   final String neighbourhood;
   final bool isWorkerRegistered;
   final bool isCnicVerified;

@@ -231,14 +231,17 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
         const SizedBox(height: 8),
         Row(
           children: [
-            Text(
-              'Code sent to +92 ${_phoneController.text}',
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppColors.secondaryText,
+            Expanded(
+              child: Text(
+                'Code sent to +92 ${_phoneController.text}',
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppColors.secondaryText,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 8),
             GestureDetector(
               onTap: () {
                 setState(() {
@@ -261,42 +264,45 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: List.generate(
             4,
-            (index) => SizedBox(
-              width: 60,
-              height: 64,
-              child: TextFormField(
-                controller: _otpControllers[index],
-                focusNode: _otpFocusNodes[index],
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.center,
-                maxLength: 1,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primaryText,
-                ),
-                decoration: InputDecoration(
-                  counterText: '',
-                  contentPadding: EdgeInsets.zero,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: AppColors.border),
+            (index) => Flexible(
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 58),
+                height: 60,
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                child: TextFormField(
+                  controller: _otpControllers[index],
+                  focusNode: _otpFocusNodes[index],
+                  keyboardType: TextInputType.number,
+                  textAlign: TextAlign.center,
+                  maxLength: 1,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryText,
                   ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                      color: AppColors.primary,
-                      width: 2,
+                  decoration: InputDecoration(
+                    counterText: '',
+                    contentPadding: EdgeInsets.zero,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(
+                        color: AppColors.primary,
+                        width: 2,
+                      ),
                     ),
                   ),
+                  onChanged: (value) {
+                    if (value.isNotEmpty && index < 3) {
+                      _otpFocusNodes[index + 1].requestFocus();
+                    } else if (value.isEmpty && index > 0) {
+                      _otpFocusNodes[index - 1].requestFocus();
+                    }
+                  },
                 ),
-                onChanged: (value) {
-                  if (value.isNotEmpty && index < 3) {
-                    _otpFocusNodes[index + 1].requestFocus();
-                  } else if (value.isEmpty && index > 0) {
-                    _otpFocusNodes[index - 1].requestFocus();
-                  }
-                },
               ),
             ),
           ),

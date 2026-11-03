@@ -125,6 +125,8 @@ class WorkerProfileScreen extends StatelessWidget {
                                     SizedBox(width: 4),
                                     Text(
                                       'CNIC Verified Tradesperson',
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
@@ -146,25 +148,31 @@ class WorkerProfileScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildStatItem(
-                        icon: Icons.star_rounded,
-                        iconColor: AppColors.ratingAccent,
-                        title: '${worker.rating}',
-                        subtitle: '${worker.reviewCount} reviews',
+                      Expanded(
+                        child: _buildStatItem(
+                          icon: Icons.star_rounded,
+                          iconColor: AppColors.ratingAccent,
+                          title: '${worker.rating}',
+                          subtitle: '${worker.reviewCount} reviews',
+                        ),
                       ),
-                      _buildStatItem(
-                        icon: Icons.work_history_rounded,
-                        iconColor: AppColors.primary,
-                        title: '${worker.experienceYears} Years',
-                        subtitle: 'Experience',
+                      Expanded(
+                        child: _buildStatItem(
+                          icon: Icons.work_history_rounded,
+                          iconColor: AppColors.primary,
+                          title: '${worker.experienceYears} Years',
+                          subtitle: 'Experience',
+                        ),
                       ),
-                      _buildStatItem(
-                        icon: Icons.payments_rounded,
-                        iconColor: AppColors.darkGreen,
-                        title: worker.visitFee == 0
-                            ? 'Free'
-                            : 'Rs. ${worker.visitFee}',
-                        subtitle: 'Visit Fee',
+                      Expanded(
+                        child: _buildStatItem(
+                          icon: Icons.payments_rounded,
+                          iconColor: AppColors.darkGreen,
+                          title: worker.visitFee == 0
+                              ? 'Free'
+                              : 'Rs. ${worker.visitFee}',
+                          subtitle: 'Visit Fee',
+                        ),
                       ),
                     ],
                   ),
@@ -467,6 +475,9 @@ class WorkerProfileScreen extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
           style: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,
@@ -475,6 +486,9 @@ class WorkerProfileScreen extends StatelessWidget {
         ),
         Text(
           subtitle,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
           style: const TextStyle(fontSize: 11, color: AppColors.secondaryText),
         ),
       ],

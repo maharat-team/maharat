@@ -101,12 +101,16 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
                               color: AppColors.primary,
                             ),
                             const SizedBox(width: 4),
-                            Text(
-                              user.neighbourhood,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
+                            Expanded(
+                              child: Text(
+                                user.neighbourhood,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
                               ),
                             ),
                           ],
@@ -145,12 +149,16 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
                         size: 24,
                       ),
                       SizedBox(width: 10),
-                      Text(
-                        'Are you a Tradesperson?',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.white,
+                      Expanded(
+                        child: Text(
+                          'Are you a Tradesperson?',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.white,
+                          ),
                         ),
                       ),
                     ],
@@ -346,12 +354,13 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
     required VoidCallback onTap,
     Color iconColor = AppColors.primary,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.white,
+    return Material(
+      color: AppColors.white,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        side: const BorderSide(color: AppColors.border),
       ),
+      clipBehavior: Clip.antiAlias,
       child: ListTile(
         onTap: onTap,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

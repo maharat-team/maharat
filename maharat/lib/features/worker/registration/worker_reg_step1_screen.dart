@@ -15,14 +15,25 @@ class WorkerRegStep1Screen extends StatefulWidget {
 class _WorkerRegStep1ScreenState extends State<WorkerRegStep1Screen> {
   final _formKey = GlobalKey<FormState>();
   late String _selectedTrade;
-  final TextEditingController _experienceController = TextEditingController(text: '6');
-  final TextEditingController _phoneController = TextEditingController(text: '+92 300 1234567');
-  final TextEditingController _visitFeeController = TextEditingController(text: '300');
+  final TextEditingController _experienceController = TextEditingController(
+    text: '6',
+  );
+  final TextEditingController _phoneController = TextEditingController(
+    text: '+92 300 1234567',
+  );
+  final TextEditingController _visitFeeController = TextEditingController(
+    text: '300',
+  );
   final TextEditingController _bioController = TextEditingController(
-    text: 'Experienced tradesperson offering reliable services across Bahawalpur.',
+    text:
+        'Experienced tradesperson offering reliable services across Bahawalpur.',
   );
 
-  final Set<String> _selectedServiceAreas = {'Model Town A', 'Model Town B', 'Satellite Town'};
+  final Set<String> _selectedServiceAreas = {
+    'Model Town A',
+    'Model Town B',
+    'Satellite Town',
+  };
 
   @override
   void initState() {
@@ -43,7 +54,11 @@ class _WorkerRegStep1ScreenState extends State<WorkerRegStep1Screen> {
     if (_formKey.currentState!.validate()) {
       if (_selectedServiceAreas.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select at least one service area in Bahawalpur')),
+          const SnackBar(
+            content: Text(
+              'Please select at least one service area in Bahawalpur',
+            ),
+          ),
         );
         return;
       }
@@ -52,7 +67,8 @@ class _WorkerRegStep1ScreenState extends State<WorkerRegStep1Screen> {
         MaterialPageRoute(
           builder: (_) => WorkerRegStep2Screen(
             trade: _selectedTrade,
-            experienceYears: int.tryParse(_experienceController.text.trim()) ?? 1,
+            experienceYears:
+                int.tryParse(_experienceController.text.trim()) ?? 1,
             phone: _phoneController.text.trim(),
             visitFee: int.tryParse(_visitFeeController.text.trim()) ?? 0,
             serviceAreas: _selectedServiceAreas.toList(),
@@ -67,9 +83,7 @@ class _WorkerRegStep1ScreenState extends State<WorkerRegStep1Screen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Tradesperson Registration (1/2)'),
-      ),
+      appBar: AppBar(title: const Text('Tradesperson Registration (1/2)')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
@@ -120,7 +134,11 @@ class _WorkerRegStep1ScreenState extends State<WorkerRegStep1Screen> {
               // 1. Select Trade
               const Text(
                 '1. Select Primary Trade',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primaryText),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primaryText,
+                ),
               ),
               const SizedBox(height: 8),
               Wrap(
@@ -129,18 +147,30 @@ class _WorkerRegStep1ScreenState extends State<WorkerRegStep1Screen> {
                 children: AppConstants.categories.map((c) {
                   final isSelected = _selectedTrade == c.nameEn;
                   return ChoiceChip(
-                    avatar: Icon(c.icon, size: 18, color: isSelected ? AppColors.white : c.color),
+                    avatar: Icon(
+                      c.icon,
+                      size: 18,
+                      color: isSelected ? AppColors.white : c.color,
+                    ),
                     label: Text(c.nameEn),
                     selected: isSelected,
                     selectedColor: AppColors.primary,
                     backgroundColor: AppColors.white,
                     labelStyle: TextStyle(
-                      color: isSelected ? AppColors.white : AppColors.primaryText,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: isSelected
+                          ? AppColors.white
+                          : AppColors.primaryText,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                     ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
-                      side: BorderSide(color: isSelected ? AppColors.primary : AppColors.border),
+                      side: BorderSide(
+                        color: isSelected
+                            ? AppColors.primary
+                            : AppColors.border,
+                      ),
                     ),
                     onSelected: (val) {
                       if (val) {
@@ -156,32 +186,44 @@ class _WorkerRegStep1ScreenState extends State<WorkerRegStep1Screen> {
               const SizedBox(height: 20),
 
               // 2. Experience Years & Visit Fee Row
-              Row(
-                children: [
-                  Expanded(
-                    child: CustomTextField(
-                      label: 'Experience (Years)',
-                      hint: '8',
-                      controller: _experienceController,
-                      keyboardType: TextInputType.number,
-                      prefixIcon: Icons.work_history_rounded,
-                      validator: (val) {
-                        if (val == null || val.isEmpty) return 'Required';
-                        return null;
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: CustomTextField(
-                      label: 'Visit Fee (Rs)',
-                      hint: '300 (or 0 for Free)',
-                      controller: _visitFeeController,
-                      keyboardType: TextInputType.number,
-                      prefixIcon: Icons.payments_rounded,
-                    ),
-                  ),
-                ],
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final experienceField = CustomTextField(
+                    label: 'Experience (Years)',
+                    hint: '8',
+                    controller: _experienceController,
+                    keyboardType: TextInputType.number,
+                    prefixIcon: Icons.work_history_rounded,
+                    validator: (val) {
+                      if (val == null || val.isEmpty) return 'Required';
+                      return null;
+                    },
+                  );
+                  final visitFeeField = CustomTextField(
+                    label: 'Visit Fee (Rs)',
+                    hint: '300 (or 0 for Free)',
+                    controller: _visitFeeController,
+                    keyboardType: TextInputType.number,
+                    prefixIcon: Icons.payments_rounded,
+                  );
+
+                  if (constraints.maxWidth < 380) {
+                    return Column(
+                      children: [
+                        experienceField,
+                        const SizedBox(height: 16),
+                        visitFeeField,
+                      ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      Expanded(child: experienceField),
+                      const SizedBox(width: 12),
+                      Expanded(child: visitFeeField),
+                    ],
+                  );
+                },
               ),
 
               const SizedBox(height: 20),
@@ -194,7 +236,9 @@ class _WorkerRegStep1ScreenState extends State<WorkerRegStep1Screen> {
                 keyboardType: TextInputType.phone,
                 prefixIcon: Icons.chat_bubble_outline_rounded,
                 validator: (val) {
-                  if (val == null || val.isEmpty) return 'Please enter phone number';
+                  if (val == null || val.isEmpty) {
+                    return 'Please enter phone number';
+                  }
                   return null;
                 },
               ),
@@ -204,7 +248,11 @@ class _WorkerRegStep1ScreenState extends State<WorkerRegStep1Screen> {
               // 4. Service Areas in Bahawalpur
               const Text(
                 '4. Select Service Areas in Bahawalpur',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primaryText),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primaryText,
+                ),
               ),
               const SizedBox(height: 8),
               Wrap(
@@ -218,13 +266,21 @@ class _WorkerRegStep1ScreenState extends State<WorkerRegStep1Screen> {
                     selectedColor: AppColors.lightMint,
                     checkmarkColor: AppColors.primary,
                     labelStyle: TextStyle(
-                      color: isSelected ? AppColors.darkGreen : AppColors.primaryText,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: isSelected
+                          ? AppColors.darkGreen
+                          : AppColors.primaryText,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                       fontSize: 12,
                     ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(color: isSelected ? AppColors.primary : AppColors.border),
+                      side: BorderSide(
+                        color: isSelected
+                            ? AppColors.primary
+                            : AppColors.border,
+                      ),
                     ),
                     onSelected: (selected) {
                       setState(() {

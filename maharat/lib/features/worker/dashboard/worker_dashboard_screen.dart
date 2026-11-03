@@ -134,28 +134,39 @@ class WorkerDashboardScreen extends StatelessWidget {
                   const SizedBox(height: 12),
                   // Availability Switch Toggle
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 10,
-                            height: 10,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: worker.isAvailableToday ? AppColors.statusGreen : AppColors.secondaryText,
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 10,
+                              height: 10,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: worker.isAvailableToday
+                                    ? AppColors.statusGreen
+                                    : AppColors.secondaryText,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            worker.isAvailableToday ? 'Available for Jobs Today' : 'Currently Unavailable',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: worker.isAvailableToday ? AppColors.darkGreen : AppColors.secondaryText,
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                worker.isAvailableToday
+                                    ? 'Available for Jobs Today'
+                                    : 'Currently Unavailable',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: worker.isAvailableToday
+                                      ? AppColors.darkGreen
+                                      : AppColors.secondaryText,
+                                ),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                       Switch(
                         value: worker.isAvailableToday,
@@ -211,18 +222,46 @@ class WorkerDashboardScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      const title = Text(
                         'Profile Strength',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primaryText),
-                      ),
-                      Text(
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryText,
+                        ),
+                      );
+                      const completion = Text(
                         '90% Complete',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
-                      ),
-                    ],
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      );
+
+                      if (constraints.maxWidth < 300) {
+                        return const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            title,
+                            SizedBox(height: 4),
+                            completion,
+                          ],
+                        );
+                      }
+                      return const Row(
+                        children: [
+                          Expanded(child: title),
+                          SizedBox(width: 8),
+                          completion,
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 8),
                   ClipRRect(
@@ -288,12 +327,12 @@ class WorkerDashboardScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            Row(
-                              children: [
-                                Container(
+                            Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
                                     color: AppColors.primary.withAlpha(20),
@@ -307,21 +346,27 @@ class WorkerDashboardScreen extends StatelessWidget {
                                       color: AppColors.darkGreen,
                                     ),
                                   ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  '• Needed ${job.urgency}',
-                                  style: const TextStyle(fontSize: 12, color: AppColors.secondaryText),
-                                ),
-                              ],
+                            ),
+                            Text(
+                              '• Needed ${job.urgency}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.secondaryText,
+                              ),
                             ),
                             Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 const Icon(Icons.location_on_outlined, size: 14, color: AppColors.secondaryText),
                                 const SizedBox(width: 2),
-                                Text(
-                                  job.location,
-                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryText),
+                                ConstrainedBox(
+                                  constraints: const BoxConstraints(maxWidth: 140),
+                                  child: Text(
+                                    job.location,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryText),
+                                  ),
                                 ),
                               ],
                             ),
@@ -335,11 +380,14 @@ class WorkerDashboardScreen extends StatelessWidget {
                         const SizedBox(height: 12),
                         Row(
                           children: [
-                            Text(
-                              'Customer: ${job.customerName}',
-                              style: const TextStyle(fontSize: 12, color: AppColors.secondaryText),
+                            Flexible(
+                              child: Text(
+                                'Customer: ${job.customerName}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 12, color: AppColors.secondaryText),
+                              ),
                             ),
-                            const Spacer(),
                             if (job.hasVoiceNote)
                               const Row(
                                 children: [

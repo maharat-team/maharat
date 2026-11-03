@@ -133,118 +133,74 @@ class _FindWorkersTabState extends State<FindWorkersTab> {
                 ),
                 const SizedBox(height: 10),
 
-                // Secondary Filter Controls Row
-                Row(
-                  children: [
-                    // Area Filter Dropdown
-                    Expanded(
-                      child: Container(
-                        height: 38,
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        decoration: BoxDecoration(
-                          color: AppColors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
+                // Secondary filter controls wrap into additional rows on narrow screens.
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final areaWidth = constraints.maxWidth < 240
+                        ? constraints.maxWidth
+                        : 240.0;
+                    final sortWidth = constraints.maxWidth < 170
+                        ? constraints.maxWidth
+                        : 170.0;
+                    return Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: areaWidth,
+                          child: _buildFilterDropdown(
                             value: _selectedNeighbourhood,
-                            isExpanded: true,
-                            icon: const Icon(
-                              Icons.arrow_drop_down_rounded,
-                              color: AppColors.secondaryText,
+                            options: [
+                              'All',
+                              ...AppConstants.bahawalpurNeighbourhoods,
+                            ],
+                            labelBuilder: (area) =>
+                                area == 'All' ? 'All Areas' : area,
+                            onChanged: (value) =>
+                                setState(() => _selectedNeighbourhood = value),
+                          ),
+                        ),
+                        SizedBox(
+                          width: sortWidth,
+                          child: _buildFilterDropdown(
+                            value: _sortBy,
+                            options: const [
+                              'Rating',
+                              'Experience',
+                              'Visit Fee',
+                            ],
+                            labelBuilder: (sort) => 'Sort: $sort',
+                            icon: Icons.sort_rounded,
+                            onChanged: (value) =>
+                                setState(() => _sortBy = value),
+                          ),
+                        ),
+                        FilterChip(
+                          selected: _availableTodayOnly,
+                          label: const Text(
+                            'Available Today',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
                             ),
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.primaryText,
-                              fontWeight: FontWeight.w600,
+                          ),
+                          selectedColor: AppColors.lightMint,
+                          checkmarkColor: AppColors.primary,
+                          onSelected: (value) =>
+                              setState(() => _availableTodayOnly = value),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            side: BorderSide(
+                              color: _availableTodayOnly
+                                  ? AppColors.primary
+                                  : AppColors.border,
                             ),
-                            items:
-                                [
-                                  'All',
-                                  ...AppConstants.bahawalpurNeighbourhoods,
-                                ].map((area) {
-                                  return DropdownMenuItem<String>(
-                                    value: area,
-                                    child: Text(
-                                      area == 'All' ? 'All Areas' : area,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  );
-                                }).toList(),
-                            onChanged: (val) {
-                              if (val != null) {
-                                setState(() => _selectedNeighbourhood = val);
-                              }
-                            },
                           ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-
-                    // Sort By Dropdown
-                    Container(
-                      height: 38,
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      decoration: BoxDecoration(
-                        color: AppColors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: _sortBy,
-                          icon: const Icon(
-                            Icons.sort_rounded,
-                            size: 16,
-                            color: AppColors.secondaryText,
-                          ),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.primaryText,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          items: ['Rating', 'Experience', 'Visit Fee'].map((s) {
-                            return DropdownMenuItem<String>(
-                              value: s,
-                              child: Text('Sort: $s'),
-                            );
-                          }).toList(),
-                          onChanged: (val) {
-                            if (val != null) {
-                              setState(() => _sortBy = val);
-                            }
-                          },
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-
-                    // Available Today Chip Toggle
-                    FilterChip(
-                      selected: _availableTodayOnly,
-                      label: const Text(
-                        'Available Today',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      selectedColor: AppColors.lightMint,
-                      checkmarkColor: AppColors.primary,
-                      onSelected: (val) =>
-                          setState(() => _availableTodayOnly = val),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        side: BorderSide(
-                          color: _availableTodayOnly
-                              ? AppColors.primary
-                              : AppColors.border,
-                        ),
-                      ),
-                    ),
-                  ],
+                      ],
+                    );
+                  },
                 ),
               ],
             ),
@@ -309,6 +265,55 @@ class _FindWorkersTabState extends State<FindWorkersTab> {
             });
           }
         },
+      ),
+    );
+  }
+
+  Widget _buildFilterDropdown({
+    required String value,
+    required List<String> options,
+    required String Function(String) labelBuilder,
+    required ValueChanged<String> onChanged,
+    IconData? icon,
+  }) {
+    return Container(
+      height: 38,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          isExpanded: true,
+          icon: Icon(
+            icon ?? Icons.arrow_drop_down_rounded,
+            size: icon == null ? 24 : 16,
+            color: AppColors.secondaryText,
+          ),
+          style: const TextStyle(
+            fontSize: 12,
+            color: AppColors.primaryText,
+            fontWeight: FontWeight.w600,
+          ),
+          items: options
+              .map(
+                (option) => DropdownMenuItem<String>(
+                  value: option,
+                  child: Text(
+                    labelBuilder(option),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              )
+              .toList(),
+          onChanged: (selected) {
+            if (selected != null) onChanged(selected);
+          },
+        ),
       ),
     );
   }
