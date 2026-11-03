@@ -17,35 +17,51 @@ class SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final trailingWidget =
+        trailing ??
+        (actionText != null && onActionPressed != null
+            ? GestureDetector(
+                onTap: onActionPressed,
+                child: Text(
+                  actionText!,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
+                ),
+              )
+            : null);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppColors.primaryText,
-            ),
-          ),
-          if (trailing != null)
-            trailing!
-          else if (actionText != null && onActionPressed != null)
-            GestureDetector(
-              onTap: onActionPressed,
-              child: Text(
-                actionText!,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primary,
-                ),
+      child: trailingWidget == null
+          ? Text(
+              title,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primaryText,
               ),
+            )
+          : Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primaryText,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Flexible(child: trailingWidget),
+              ],
             ),
-        ],
-      ),
     );
   }
 }

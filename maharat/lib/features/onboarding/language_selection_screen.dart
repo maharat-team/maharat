@@ -21,87 +21,93 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20),
-              Center(
-                child: Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: AppColors.lightMint,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Icon(
-                    Icons.translate_rounded,
-                    size: 32,
-                    color: AppColors.primary,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight - 48.0,
+                ),
+                child: IntrinsicHeight(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 10),
+                      Center(
+                        child: Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: AppColors.lightMint,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Icon(
+                            Icons.translate_rounded,
+                            size: 32,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      const Center(
+                        child: Text(
+                          'Select Language / زبان منتخب کریں',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primaryText,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Center(
+                        child: Text(
+                          'Choose your preferred language to continue',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: AppColors.secondaryText,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+                      _buildLanguageCard(
+                        title: 'اردو',
+                        subtitle: 'Urdu',
+                        code: 'Urdu',
+                        isUrduFont: true,
+                      ),
+                      const SizedBox(height: 14),
+                      _buildLanguageCard(
+                        title: 'English',
+                        subtitle: 'Default language',
+                        code: 'English',
+                      ),
+                      const Spacer(),
+                      const SizedBox(height: 24),
+                      CustomButton(
+                        text: 'Continue / آگے بڑھیں',
+                        onPressed: () {
+                          final appState = Provider.of<AppState>(
+                            context,
+                            listen: false,
+                          );
+                          appState.setLanguage(_selectedLang);
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const UserTypeSelectionScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(height: 28),
-              const Center(
-                child: Text(
-                  'Select Language / زبان منتخب کریں',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primaryText,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Center(
-                child: Text(
-                  'Choose your preferred language to continue',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.secondaryText,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 36),
-              _buildLanguageCard(
-                title: 'اردو',
-                subtitle: 'Urdu',
-                code: 'Urdu',
-                isUrduFont: true,
-              ),
-              const SizedBox(height: 16),
-              _buildLanguageCard(
-                title: 'Roman Urdu',
-                subtitle: 'Aapki apni zubaan',
-                code: 'Roman Urdu',
-              ),
-              const SizedBox(height: 16),
-              _buildLanguageCard(
-                title: 'English',
-                subtitle: 'Default language',
-                code: 'English',
-              ),
-              const Spacer(),
-              CustomButton(
-                text: 'Continue / آگے بڑھیں',
-                onPressed: () {
-                  final appState = Provider.of<AppState>(
-                    context,
-                    listen: false,
-                  );
-                  appState.setLanguage(_selectedLang);
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const UserTypeSelectionScreen(),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

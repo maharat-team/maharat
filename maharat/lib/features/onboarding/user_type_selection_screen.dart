@@ -27,59 +27,71 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
         ),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'How will you use Maharat?',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primaryText,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight - 48.0,
+                ),
+                child: IntrinsicHeight(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'How will you use Maharat?',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryText,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Select your profile type to customize your app experience.',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppColors.secondaryText,
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+                      _buildRoleCard(
+                        role: UserRole.customer,
+                        title: 'I need a worker',
+                        urduTitle: 'مجھے کاریگر چاہیے',
+                        description: 'Find plumber, electrician, carpenter, AC tech & more nearby in Bahawalpur.',
+                        icon: Icons.search_rounded,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildRoleCard(
+                        role: UserRole.worker,
+                        title: 'I am a worker',
+                        urduTitle: 'میں کاریگر ہوں',
+                        description: 'Offer your tradesperson services to local households. 0% commission, direct calls.',
+                        icon: Icons.engineering_rounded,
+                      ),
+                      const Spacer(),
+                      const SizedBox(height: 24),
+                      CustomButton(
+                        text: 'Continue',
+                        onPressed: () {
+                          final appState = Provider.of<AppState>(context, listen: false);
+                          appState.setUserRole(_selectedRole);
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const PhoneAuthScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Select your profile type to customize your app experience.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.secondaryText,
-                ),
-              ),
-              const SizedBox(height: 32),
-              _buildRoleCard(
-                role: UserRole.customer,
-                title: 'I need a worker',
-                urduTitle: 'مجھے کاریگر چاہیے',
-                description: 'Find plumber, electrician, carpenter, AC tech & more nearby in Bahawalpur.',
-                icon: Icons.search_rounded,
-              ),
-              const SizedBox(height: 20),
-              _buildRoleCard(
-                role: UserRole.worker,
-                title: 'I am a worker',
-                urduTitle: 'میں کاریگر ہوں',
-                description: 'Offer your tradesperson services to local households. 0% commission, direct calls.',
-                icon: Icons.engineering_rounded,
-              ),
-              const Spacer(),
-              CustomButton(
-                text: 'Continue',
-                onPressed: () {
-                  final appState = Provider.of<AppState>(context, listen: false);
-                  appState.setUserRole(_selectedRole);
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const PhoneAuthScreen(),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
@@ -148,14 +160,19 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryText,
+                      Expanded(
+                        child: Text(
+                          title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primaryText,
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Container(
                         width: 22,
                         height: 22,

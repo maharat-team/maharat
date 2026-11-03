@@ -54,39 +54,36 @@ class RequestCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withAlpha(20),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            request.tradeCategory,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.darkGreen,
-                            ),
-                          ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withAlpha(20),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        request.tradeCategory,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.darkGreen,
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '• ${request.urgency}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.secondaryText,
-                          ),
-                        ),
-                      ],
+                      ),
+                    ),
+                    Text(
+                      '• ${request.urgency}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.secondaryText,
+                      ),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -120,52 +117,86 @@ class RequestCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 10),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.location_on_outlined,
-                      size: 14,
-                      color: AppColors.secondaryText,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      request.location,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.secondaryText,
-                      ),
-                    ),
-                    const Spacer(),
-                    if (request.status == 'Active')
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.people_outline_rounded,
-                            size: 16,
-                            color: AppColors.primary,
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final location = Row(
+                      children: [
+                        const Icon(
+                          Icons.location_on_outlined,
+                          size: 14,
+                          color: AppColors.secondaryText,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            request.location,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.secondaryText,
+                            ),
                           ),
-                          const SizedBox(width: 4),
-                          Text(
+                        ),
+                      ],
+                    );
+                    final interested = Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.people_outline_rounded,
+                          size: 16,
+                          color: AppColors.primary,
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
                             '${request.interestedWorkers.length} workers interested',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                               color: AppColors.primary,
                             ),
                           ),
+                        ),
+                      ],
+                    );
+
+                    if (request.status != 'Active') return location;
+                    if (constraints.maxWidth < 340) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          location,
+                          const SizedBox(height: 4),
+                          interested,
                         ],
-                      ),
-                  ],
+                      );
+                    }
+                    return Row(
+                      children: [
+                        Expanded(child: location),
+                        const SizedBox(width: 8),
+                        interested,
+                      ],
+                    );
+                  },
                 ),
                 if (request.status == 'Active' && onCloseTap != null) ...[
                   const SizedBox(height: 12),
                   const Divider(height: 1, color: AppColors.border),
                   const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       const Text(
                         'Tap to view interested workers',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 12,
                           color: AppColors.secondaryText,
@@ -194,11 +225,14 @@ class RequestCard extends StatelessWidget {
                   const SizedBox(height: 12),
                   const Divider(height: 1, color: AppColors.border),
                   const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       if (request.ratingGiven != null)
                         Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             const Icon(
                               Icons.star_rounded,
@@ -231,7 +265,11 @@ class RequestCard extends StatelessWidget {
                             Icons.star_outline_rounded,
                             size: 16,
                           ),
-                          label: const Text('Rate Experience'),
+                          label: const Text(
+                            'Rate Experience',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.ratingAccent,
                             foregroundColor: AppColors.white,

@@ -120,6 +120,9 @@ class _RateExperienceScreenState extends State<RateExperienceScreen> {
                       fontSize: 13,
                       color: AppColors.secondaryText,
                     ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -148,12 +151,12 @@ class _RateExperienceScreenState extends State<RateExperienceScreen> {
                     });
                   },
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
                     child: Icon(
                       starValue <= _rating
                           ? Icons.star_rounded
                           : Icons.star_border_rounded,
-                      size: 42,
+                      size: 40,
                       color: AppColors.ratingAccent,
                     ),
                   ),

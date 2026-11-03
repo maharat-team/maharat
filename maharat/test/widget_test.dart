@@ -8,5 +8,6 @@ void main() {
 
     // Verify splash screen renders title or logo text
     expect(find.text('MAHARAT'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 2500));
   });
 }

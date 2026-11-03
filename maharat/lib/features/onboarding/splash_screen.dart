@@ -64,12 +64,12 @@ class _SplashScreenState extends State<SplashScreen>
     return Scaffold(
       backgroundColor: AppColors.darkGreen,
       body: Center(
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: ScaleTransition(
-            scale: _scaleAnimation,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: ScaleTransition(
+              scale: _scaleAnimation,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -135,7 +135,7 @@ class _SplashScreenState extends State<SplashScreen>
                       ),
                     ),
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 32),
                   // Tagline
                   const Text(
                     'Verified local tradespeople.\nFree for everyone. No commission.',
@@ -146,7 +146,7 @@ class _SplashScreenState extends State<SplashScreen>
                       height: 1.5,
                     ),
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 32),
                   const SizedBox(
                     width: 24,
                     height: 24,
