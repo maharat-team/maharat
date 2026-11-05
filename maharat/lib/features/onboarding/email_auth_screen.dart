@@ -1,38 +1,47 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/error_messages.dart';
 import '../../core/widgets/custom_button.dart';
 import '../../core/widgets/custom_text_field.dart';
-import '../../models/user_profile_model.dart';
+import '../../routes/session_router.dart';
 import '../../state/app_state.dart';
-import '../customer/customer_main_screen.dart';
-import '../worker/registration/worker_reg_step1_screen.dart';
-import '../worker/dashboard/worker_dashboard_screen.dart';
 
-class PhoneAuthScreen extends StatefulWidget {
-  const PhoneAuthScreen({super.key});
+class EmailAuthScreen extends StatefulWidget {
+  const EmailAuthScreen({super.key});
 
   @override
-  State<PhoneAuthScreen> createState() => _PhoneAuthScreenState();
+  State<EmailAuthScreen> createState() => _EmailAuthScreenState();
 }
 
-class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
-  final _phoneController = TextEditingController(text: '300 1234567');
+class _EmailAuthScreenState extends State<EmailAuthScreen> {
+  static const _codeLength = 6;
+  // Supabase allows one code per address every 60 seconds.
+  static const _resendSeconds = 60;
+  static final _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+
+  final _emailController = TextEditingController();
   final List<TextEditingController> _otpControllers = List.generate(
-    4,
+    _codeLength,
     (_) => TextEditingController(),
   );
-  final List<FocusNode> _otpFocusNodes = List.generate(4, (_) => FocusNode());
+  final List<FocusNode> _otpFocusNodes = List.generate(
+    _codeLength,
+    (_) => FocusNode(),
+  );
 
   bool _isOtpSent = false;
   bool _isLoading = false;
-  int _timerSeconds = 30;
+  int _timerSeconds = _resendSeconds;
   Timer? _timer;
+
+  String get _email => _emailController.text.trim().toLowerCase();
 
   @override
   void dispose() {
-    _phoneController.dispose();
+    _emailController.dispose();
     for (var c in _otpControllers) {
       c.dispose();
     }
@@ -43,8 +52,14 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
     super.dispose();
   }
 
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
   void _startResendTimer() {
-    _timerSeconds = 30;
+    _timerSeconds = _resendSeconds;
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_timerSeconds == 0) {
@@ -57,13 +72,9 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
     });
   }
 
-  void _sendOtp() {
-    if (_phoneController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter a valid Pakistani phone number'),
-        ),
-      );
+  Future<void> _sendOtp({bool isResend = false}) async {
+    if (!_emailPattern.hasMatch(_email)) {
+      _showMessage('Please enter a valid email address');
       return;
     }
 
@@ -71,30 +82,35 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
       _isLoading = true;
     });
 
-    Future.delayed(const Duration(milliseconds: 800), () {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _isOtpSent = true;
-          // Pre-fill demo OTP code 4 3 2 1
-          _otpControllers[0].text = '4';
-          _otpControllers[1].text = '3';
-          _otpControllers[2].text = '2';
-          _otpControllers[3].text = '1';
-        });
-        _startResendTimer();
-      }
-    });
+    try {
+      await Provider.of<AppState>(context, listen: false).sendEmailOtp(_email);
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _isOtpSent = true;
+      });
+      _clearCode();
+      _startResendTimer();
+      if (isResend) _showMessage('A new code is on its way.');
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+      _showMessage(friendlyError(error));
+    }
   }
 
-  void _verifyOtp() {
+  void _clearCode() {
+    for (final controller in _otpControllers) {
+      controller.clear();
+    }
+  }
+
+  Future<void> _verifyOtp() async {
     final otp = _otpControllers.map((c) => c.text).join();
-    if (otp.length < 4) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter all 4 digits of the OTP code'),
-        ),
-      );
+    if (otp.length < _codeLength) {
+      _showMessage('Please enter all $_codeLength digits of the code');
       return;
     }
 
@@ -102,30 +118,45 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
       _isLoading = true;
     });
 
-    Future.delayed(const Duration(milliseconds: 1000), () {
-      if (mounted) {
-        final appState = Provider.of<AppState>(context, listen: false);
-        appState.updateProfile(phone: '+92 ${_phoneController.text.trim()}');
+    final appState = Provider.of<AppState>(context, listen: false);
+    try {
+      await appState.verifyEmailOtp(_email, otp);
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => destinationFor(appState)),
+        (route) => false,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+      _clearCode();
+      _otpFocusNodes.first.requestFocus();
+      _showMessage(friendlyError(error));
+    }
+  }
 
-        if (appState.currentUser.userRole == UserRole.customer) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const CustomerMainScreen()),
-            (route) => false,
-          );
-        } else {
-          if (appState.currentUser.isWorkerRegistered) {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const WorkerDashboardScreen()),
-              (route) => false,
-            );
-          } else {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const WorkerRegStep1Screen()),
-            );
-          }
-        }
+  /// Handles typing and pasting. A value longer than one digit is spread across
+  /// the following boxes, so a code copied from an email lands in one action.
+  void _onCodeChanged(int index, String value) {
+    if (value.length > 1) {
+      final digits = value.split('');
+      var position = index;
+      for (final digit in digits) {
+        if (position >= _codeLength) break;
+        _otpControllers[position].text = digit;
+        position++;
       }
-    });
+      final next = position >= _codeLength ? _codeLength - 1 : position;
+      _otpFocusNodes[next].requestFocus();
+      return;
+    }
+    if (value.isNotEmpty && index < _codeLength - 1) {
+      _otpFocusNodes[index + 1].requestFocus();
+    } else if (value.isEmpty && index > 0) {
+      _otpFocusNodes[index - 1].requestFocus();
+    }
   }
 
   @override
@@ -149,18 +180,18 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
-          child: _isOtpSent ? _buildOtpView() : _buildPhoneView(),
+          child: _isOtpSent ? _buildOtpView() : _buildEmailView(),
         ),
       ),
     );
   }
 
-  Widget _buildPhoneView() {
+  Widget _buildEmailView() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Enter Phone Number',
+          'Enter Your Email',
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -169,17 +200,16 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'We will send a 4-digit verification code to your phone.',
+          'We will send a 6-digit verification code to your email.',
           style: TextStyle(fontSize: 14, color: AppColors.secondaryText),
         ),
         const SizedBox(height: 32),
         CustomTextField(
-          label: 'Mobile Number',
-          hint: '300 1234567',
-          prefixText: '+92 ',
-          controller: _phoneController,
-          keyboardType: TextInputType.phone,
-          prefixIcon: Icons.phone_android_rounded,
+          label: 'Email Address',
+          hint: 'you@example.com',
+          controller: _emailController,
+          keyboardType: TextInputType.emailAddress,
+          prefixIcon: Icons.mail_outline_rounded,
         ),
         const SizedBox(height: 24),
         Container(
@@ -195,7 +225,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
               SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Your phone number is strictly used for direct WhatsApp / phone contact. Maharat is 100% free with no spam.',
+                  'Your email is only used to sign you in. Maharat is 100% free with no spam.',
                   style: TextStyle(
                     fontSize: 12,
                     color: AppColors.darkGreen,
@@ -233,7 +263,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
           children: [
             Expanded(
               child: Text(
-                'Code sent to +92 ${_phoneController.text}',
+                'Code sent to $_email',
                 style: const TextStyle(
                   fontSize: 14,
                   color: AppColors.secondaryText,
@@ -263,20 +293,23 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: List.generate(
-            4,
+            _codeLength,
             (index) => Flexible(
               child: Container(
-                constraints: const BoxConstraints(maxWidth: 58),
+                constraints: const BoxConstraints(maxWidth: 52),
                 height: 60,
-                margin: const EdgeInsets.symmetric(horizontal: 4),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
                 child: TextFormField(
                   controller: _otpControllers[index],
                   focusNode: _otpFocusNodes[index],
                   keyboardType: TextInputType.number,
                   textAlign: TextAlign.center,
-                  maxLength: 1,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(_codeLength),
+                  ],
                   style: const TextStyle(
-                    fontSize: 24,
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: AppColors.primaryText,
                   ),
@@ -295,13 +328,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                       ),
                     ),
                   ),
-                  onChanged: (value) {
-                    if (value.isNotEmpty && index < 3) {
-                      _otpFocusNodes[index + 1].requestFocus();
-                    } else if (value.isEmpty && index > 0) {
-                      _otpFocusNodes[index - 1].requestFocus();
-                    }
-                  },
+                  onChanged: (value) => _onCodeChanged(index, value),
                 ),
               ),
             ),
@@ -311,21 +338,16 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
         Center(
           child: _timerSeconds > 0
               ? Text(
-                  'Resend code in 00:${_timerSeconds.toString().padLeft(2, '0')}',
+                  'Resend code in ${_timerSeconds}s',
                   style: const TextStyle(
                     fontSize: 14,
                     color: AppColors.secondaryText,
                   ),
                 )
               : TextButton(
-                  onPressed: () {
-                    _startResendTimer();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('OTP Code Resent!')),
-                    );
-                  },
+                  onPressed: _isLoading ? null : () => _sendOtp(isResend: true),
                   child: const Text(
-                    'Resend OTP Code',
+                    'Resend Code',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -334,7 +356,14 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                   ),
                 ),
         ),
-        const SizedBox(height: 40),
+        const SizedBox(height: 12),
+        const Center(
+          child: Text(
+            'Not there? Check your spam folder.',
+            style: TextStyle(fontSize: 12, color: AppColors.secondaryText),
+          ),
+        ),
+        const SizedBox(height: 28),
         CustomButton(
           text: 'Verify & Proceed',
           isLoading: _isLoading,

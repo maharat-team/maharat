@@ -66,5 +66,14 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Maharat uses the camera to photograph your work, job problems and CNIC.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Maharat lets you attach photos of your work, job problems and CNIC.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tel</string>
+		<string>https</string>
+	</array>
 </dict>
 </plist>

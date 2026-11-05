@@ -308,7 +308,10 @@ class WorkerCard extends StatelessWidget {
                         children: [
                           details,
                           const SizedBox(height: 8),
-                          Align(alignment: Alignment.centerRight, child: actions),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: actions,
+                          ),
                         ],
                       );
                     }

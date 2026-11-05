@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/contact_launcher.dart';
+import '../../../core/widgets/state_views.dart';
 import '../../../core/widgets/worker_card.dart';
 import '../../../state/app_state.dart';
 import '../worker_profile/worker_profile_screen.dart';
@@ -208,34 +210,58 @@ class _FindWorkersTabState extends State<FindWorkersTab> {
 
           // Worker Results List
           Expanded(
-            child: filteredWorkers.isEmpty
+            child: allWorkers.isEmpty
+                ? _buildNoDataState(appState)
+                : filteredWorkers.isEmpty
                 ? _buildEmptyState()
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: filteredWorkers.length,
-                    itemBuilder: (context, index) {
-                      final worker = filteredWorkers[index];
-                      return WorkerCard(
-                        worker: worker,
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  WorkerProfileScreen(worker: worker),
-                            ),
-                          );
-                        },
-                        onWhatsAppTap: () =>
-                            _openContactDialog(context, worker, true),
-                        onCallTap: () =>
-                            _openContactDialog(context, worker, false),
-                      );
-                    },
+                : RefreshIndicator(
+                    onRefresh: appState.refreshWorkers,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: filteredWorkers.length,
+                      itemBuilder: (context, index) {
+                        final worker = filteredWorkers[index];
+                        return WorkerCard(
+                          worker: worker,
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    WorkerProfileScreen(worker: worker),
+                              ),
+                            );
+                          },
+                          onWhatsAppTap: () =>
+                              _openContactDialog(context, worker, true),
+                          onCallTap: () =>
+                              _openContactDialog(context, worker, false),
+                        );
+                      },
+                    ),
                   ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildNoDataState(AppState appState) {
+    switch (appState.workersStatus) {
+      case LoadStatus.idle:
+      case LoadStatus.loading:
+        return const LoadingView();
+      case LoadStatus.error:
+        return ErrorRetryView(
+          message: appState.workersError ?? 'Could not load workers.',
+          onRetry: appState.refreshWorkers,
+        );
+      case LoadStatus.ready:
+        return const EmptyStateView(
+          icon: Icons.engineering_outlined,
+          title: 'No verified workers yet',
+          subtitle: 'Verified tradespeople will appear here as they join.',
+        );
+    }
   }
 
   Widget _buildCategoryChip(String label) {
@@ -422,14 +448,10 @@ class _FindWorkersTabState extends State<FindWorkersTab> {
             ),
             onPressed: () {
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    isWhatsApp
-                        ? 'Opening WhatsApp chat with ${worker.name}...'
-                        : 'Calling ${worker.name} at ${worker.phone}...',
-                  ),
-                ),
+              contactWorker(
+                context,
+                phone: worker.phone,
+                isWhatsApp: isWhatsApp,
               );
             },
             child: Text(isWhatsApp ? 'Open WhatsApp' : 'Call Now'),

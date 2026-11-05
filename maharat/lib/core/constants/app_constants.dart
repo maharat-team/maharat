@@ -19,6 +19,8 @@ class TradeCategoryInfo {
 }
 
 class AppConstants {
+  static const int maxWorkPhotos = 12;
+
   static const String appNameEn = 'Maharat';
   static const String appNameUrdu = 'مہارت';
   static const String taglineEn =

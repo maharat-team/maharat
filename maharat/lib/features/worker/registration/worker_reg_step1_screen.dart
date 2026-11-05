@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/phone_utils.dart';
 import '../../../core/widgets/custom_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
+import '../../../state/app_state.dart';
 import 'worker_reg_step2_screen.dart';
 
 class WorkerRegStep1Screen extends StatefulWidget {
@@ -15,30 +18,22 @@ class WorkerRegStep1Screen extends StatefulWidget {
 class _WorkerRegStep1ScreenState extends State<WorkerRegStep1Screen> {
   final _formKey = GlobalKey<FormState>();
   late String _selectedTrade;
-  final TextEditingController _experienceController = TextEditingController(
-    text: '6',
-  );
-  final TextEditingController _phoneController = TextEditingController(
-    text: '+92 300 1234567',
-  );
-  final TextEditingController _visitFeeController = TextEditingController(
-    text: '300',
-  );
-  final TextEditingController _bioController = TextEditingController(
-    text:
-        'Experienced tradesperson offering reliable services across Bahawalpur.',
-  );
+  final TextEditingController _experienceController = TextEditingController();
+  late final TextEditingController _phoneController;
+  final TextEditingController _visitFeeController = TextEditingController();
+  final TextEditingController _bioController = TextEditingController();
 
-  final Set<String> _selectedServiceAreas = {
-    'Model Town A',
-    'Model Town B',
-    'Satellite Town',
-  };
+  final Set<String> _selectedServiceAreas = {};
 
   @override
   void initState() {
     super.initState();
     _selectedTrade = AppConstants.categories.first.nameEn;
+    final user = Provider.of<AppState>(context, listen: false).currentUser;
+    _phoneController = TextEditingController(text: user.phone);
+    if (AppConstants.bahawalpurNeighbourhoods.contains(user.neighbourhood)) {
+      _selectedServiceAreas.add(user.neighbourhood);
+    }
   }
 
   @override
@@ -69,7 +64,7 @@ class _WorkerRegStep1ScreenState extends State<WorkerRegStep1Screen> {
             trade: _selectedTrade,
             experienceYears:
                 int.tryParse(_experienceController.text.trim()) ?? 1,
-            phone: _phoneController.text.trim(),
+            phone: PhoneUtils.normalize(_phoneController.text)!,
             visitFee: int.tryParse(_visitFeeController.text.trim()) ?? 0,
             serviceAreas: _selectedServiceAreas.toList(),
             bio: _bioController.text.trim(),
@@ -235,12 +230,7 @@ class _WorkerRegStep1ScreenState extends State<WorkerRegStep1Screen> {
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
                 prefixIcon: Icons.chat_bubble_outline_rounded,
-                validator: (val) {
-                  if (val == null || val.isEmpty) {
-                    return 'Please enter phone number';
-                  }
-                  return null;
-                },
+                validator: PhoneUtils.validate,
               ),
 
               const SizedBox(height: 20),

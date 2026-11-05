@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/custom_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
 import '../../../models/job_request_model.dart';
@@ -28,48 +29,45 @@ class _RateExperienceScreenState extends State<RateExperienceScreen> {
     super.dispose();
   }
 
-  void _submitReview() {
+  Future<void> _submitReview() async {
+    final workerId = widget.jobRequest.assignedWorkerId;
+    if (workerId == null) return;
+
     setState(() {
       _isSubmitting = true;
     });
 
-    Future.delayed(const Duration(milliseconds: 600), () {
-      if (mounted) {
-        final appState = Provider.of<AppState>(context, listen: false);
-
-        // Find worker ID if available or default to first interested worker
-        final workerId = widget.jobRequest.interestedWorkers.isNotEmpty
-            ? widget.jobRequest.interestedWorkers.first.id
-            : appState.workers.first.id;
-
-        appState.addReviewToWorker(
-          workerId: workerId,
-          jobId: widget.jobRequest.id,
-          rating: _rating,
-          comment: _commentController.text.trim().isNotEmpty
-              ? _commentController.text.trim()
-              : 'Great service provided on time with excellent quality.',
-          tags: _selectedTags.toList(),
-        );
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Thank you! Review submitted successfully.'),
-          ),
-        );
-
-        Navigator.of(context).pop();
-      }
-    });
+    final appState = Provider.of<AppState>(context, listen: false);
+    try {
+      await appState.addReviewToWorker(
+        workerId: workerId,
+        jobId: widget.jobRequest.id,
+        rating: _rating,
+        comment: _commentController.text.trim(),
+        tags: _selectedTags.toList(),
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Thank you! Review submitted successfully.'),
+        ),
+      );
+      Navigator.of(context).pop();
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isSubmitting = false;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(friendlyError(error))));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final workerName =
-        widget.jobRequest.assignedWorkerName ??
-        (widget.jobRequest.interestedWorkers.isNotEmpty
-            ? widget.jobRequest.interestedWorkers.first.name
-            : 'Tradesperson');
+        widget.jobRequest.assignedWorkerName ?? 'your tradesperson';
 
     return Scaffold(
       backgroundColor: AppColors.background,

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/image_picker_helper.dart';
 import '../../../core/widgets/custom_button.dart';
 import '../../../core/widgets/section_header.dart';
+import '../../../core/widgets/work_photo_gallery.dart';
 import '../../../models/user_profile_model.dart';
 import '../../../state/app_state.dart';
 import '../../customer/customer_main_screen.dart';
@@ -17,9 +20,7 @@ class WorkerOwnProfileScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('My Tradesperson Profile'),
-      ),
+      appBar: AppBar(title: const Text('My Tradesperson Profile')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -46,7 +47,9 @@ class WorkerOwnProfileScreen extends StatelessWidget {
                         ),
                         child: Center(
                           child: Text(
-                            worker.name.isNotEmpty ? worker.name[0].toUpperCase() : 'W',
+                            worker.name.isNotEmpty
+                                ? worker.name[0].toUpperCase()
+                                : 'W',
                             style: const TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
@@ -79,7 +82,10 @@ class WorkerOwnProfileScreen extends StatelessWidget {
                             const SizedBox(height: 4),
                             Text(
                               worker.phone,
-                              style: const TextStyle(fontSize: 13, color: AppColors.secondaryText),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: AppColors.secondaryText,
+                              ),
                             ),
                           ],
                         ),
@@ -96,7 +102,11 @@ class WorkerOwnProfileScreen extends StatelessWidget {
                       ),
                       child: const Row(
                         children: [
-                          Icon(Icons.verified_user_rounded, color: AppColors.primary, size: 20),
+                          Icon(
+                            Icons.verified_user_rounded,
+                            color: AppColors.primary,
+                            size: 20,
+                          ),
                           SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -132,7 +142,11 @@ class WorkerOwnProfileScreen extends StatelessWidget {
               ),
               child: Text(
                 worker.bio,
-                style: const TextStyle(fontSize: 14, color: AppColors.primaryText, height: 1.4),
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppColors.primaryText,
+                  height: 1.4,
+                ),
               ),
             ),
 
@@ -146,7 +160,11 @@ class WorkerOwnProfileScreen extends StatelessWidget {
               runSpacing: 8,
               children: worker.serviceAreas.map((area) {
                 return Chip(
-                  avatar: const Icon(Icons.location_on_outlined, size: 14, color: AppColors.primary),
+                  avatar: const Icon(
+                    Icons.location_on_outlined,
+                    size: 14,
+                    color: AppColors.primary,
+                  ),
                   label: Text(area),
                   backgroundColor: AppColors.white,
                   shape: RoundedRectangleBorder(
@@ -155,6 +173,23 @@ class WorkerOwnProfileScreen extends StatelessWidget {
                   ),
                 );
               }).toList(),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Work Photo Gallery
+            SectionHeader(
+              title:
+                  'Work Photos (${worker.workPhotos.length}/${AppConstants.maxWorkPhotos})',
+            ),
+            const SizedBox(height: 8),
+            WorkPhotoGallery(
+              photos: worker.workPhotos,
+              onAdd: () async {
+                final photo = await pickCompressedImage(context);
+                if (photo != null) await appState.addWorkPhoto(photo);
+              },
+              onDelete: appState.deleteWorkPhoto,
             ),
 
             const SizedBox(height: 24),
@@ -171,7 +206,10 @@ class WorkerOwnProfileScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: AppColors.border),
                 ),
-                child: const Text('No reviews yet.', style: TextStyle(color: AppColors.secondaryText)),
+                child: const Text(
+                  'No reviews yet.',
+                  style: TextStyle(color: AppColors.secondaryText),
+                ),
               )
             else
               ListView.builder(
@@ -207,12 +245,22 @@ class WorkerOwnProfileScreen extends StatelessWidget {
                             const SizedBox(width: 8),
                             Text(
                               '${review.rating} ★',
-                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.ratingAccent),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.ratingAccent,
+                              ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 4),
-                        Text(review.comment, style: const TextStyle(fontSize: 13, color: AppColors.primaryText)),
+                        Text(
+                          review.comment,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: AppColors.primaryText,
+                          ),
+                        ),
                       ],
                     ),
                   );

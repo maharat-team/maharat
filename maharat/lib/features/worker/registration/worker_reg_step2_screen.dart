@@ -1,10 +1,13 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/error_messages.dart';
+import '../../../core/utils/image_picker_helper.dart';
 import '../../../core/widgets/cnic_upload_card.dart';
 import '../../../core/widgets/custom_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
-import '../../../models/worker_model.dart';
+import '../../../services/worker_service.dart';
 import '../../../state/app_state.dart';
 import '../dashboard/worker_dashboard_screen.dart';
 
@@ -32,11 +35,13 @@ class WorkerRegStep2Screen extends StatefulWidget {
 
 class _WorkerRegStep2ScreenState extends State<WorkerRegStep2Screen> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _cnicController = TextEditingController(text: '31202-1234567-1');
+  static final _cnicPattern = RegExp(r'^\d{5}-\d{7}-\d$');
 
-  bool _isFrontUploaded = true;
-  bool _isBackUploaded = true;
-  bool _isSelfieUploaded = true;
+  final TextEditingController _cnicController = TextEditingController();
+
+  Uint8List? _front;
+  Uint8List? _back;
+  Uint8List? _selfie;
   bool _isSubmitting = false;
 
   @override
@@ -45,55 +50,65 @@ class _WorkerRegStep2ScreenState extends State<WorkerRegStep2Screen> {
     super.dispose();
   }
 
-  void _submitForVerification() {
-    if (_formKey.currentState!.validate()) {
-      if (!_isFrontUploaded || !_isBackUploaded || !_isSelfieUploaded) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please upload all 3 verification photos (Front, Back, Selfie)')),
-        );
-        return;
-      }
+  /// ID documents keep more detail than other photos so they stay legible.
+  Future<Uint8List?> _pickDocument() =>
+      pickCompressedImage(context, maxDimension: 2000, maxBytes: 1200 * 1024);
 
+  Future<void> _submitForVerification() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final front = _front;
+    final back = _back;
+    final selfie = _selfie;
+    if (front == null || back == null || selfie == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Please upload all 3 verification photos (Front, Back, Selfie)',
+          ),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    final appState = Provider.of<AppState>(context, listen: false);
+    try {
+      await appState.registerWorker(
+        WorkerApplication(
+          trade: widget.trade,
+          phone: widget.phone,
+          bio: widget.bio,
+          experienceYears: widget.experienceYears,
+          visitFee: widget.visitFee,
+          serviceAreas: widget.serviceAreas,
+          cnicNumber: _cnicController.text.trim(),
+        ),
+        front: front,
+        back: back,
+        selfie: selfie,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Submitted! We will review your CNIC shortly.'),
+        ),
+      );
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const WorkerDashboardScreen()),
+        (route) => false,
+      );
+    } catch (error) {
+      if (!mounted) return;
       setState(() {
-        _isSubmitting = true;
+        _isSubmitting = false;
       });
-
-      Future.delayed(const Duration(milliseconds: 1200), () {
-        if (mounted) {
-          final appState = Provider.of<AppState>(context, listen: false);
-
-          final newWorker = WorkerModel(
-            id: 'w_${DateTime.now().millisecondsSinceEpoch}',
-            name: appState.currentUser.name,
-            trade: widget.trade,
-            phone: widget.phone,
-            rating: 5.0,
-            reviewCount: 1,
-            experienceYears: widget.experienceYears,
-            visitFee: widget.visitFee,
-            neighbourhood: widget.serviceAreas.first,
-            serviceAreas: widget.serviceAreas,
-            bio: widget.bio,
-            isCnicVerified: true,
-            isAvailableToday: true,
-            workPhotos: [],
-            reviews: [],
-            completedJobsCount: 0,
-          );
-
-          appState.registerWorker(newWorker);
-          appState.setWorkerCnicVerified(true);
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('CNIC Verified! Worker profile successfully activated.')),
-          );
-
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const WorkerDashboardScreen()),
-            (route) => false,
-          );
-        }
-      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(friendlyError(error))));
     }
   }
 
@@ -101,9 +116,7 @@ class _WorkerRegStep2ScreenState extends State<WorkerRegStep2Screen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('CNIC Verification (2/2)'),
-      ),
+      appBar: AppBar(title: const Text('CNIC Verification (2/2)')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
@@ -161,7 +174,11 @@ class _WorkerRegStep2ScreenState extends State<WorkerRegStep2Screen> {
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.lock_rounded, color: AppColors.darkGreen, size: 24),
+                    Icon(
+                      Icons.lock_rounded,
+                      color: AppColors.darkGreen,
+                      size: 24,
+                    ),
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -188,8 +205,8 @@ class _WorkerRegStep2ScreenState extends State<WorkerRegStep2Screen> {
                 keyboardType: TextInputType.number,
                 prefixIcon: Icons.badge_rounded,
                 validator: (val) {
-                  if (val == null || val.trim().isEmpty) {
-                    return 'Please enter your CNIC number';
+                  if (val == null || !_cnicPattern.hasMatch(val.trim())) {
+                    return 'Enter your CNIC as 31202-1234567-1';
                   }
                   return null;
                 },
@@ -202,11 +219,12 @@ class _WorkerRegStep2ScreenState extends State<WorkerRegStep2Screen> {
                 title: '1. CNIC Front Photo',
                 subtitle: 'Front side showing CNIC number & clear photo',
                 icon: Icons.badge_outlined,
-                isUploaded: _isFrontUploaded,
-                onTap: () {
-                  setState(() {
-                    _isFrontUploaded = !_isFrontUploaded;
-                  });
+                isUploaded: _front != null,
+                onTap: () async {
+                  final photo = await _pickDocument();
+                  if (photo != null && mounted) {
+                    setState(() => _front = photo);
+                  }
                 },
               ),
 
@@ -215,11 +233,12 @@ class _WorkerRegStep2ScreenState extends State<WorkerRegStep2Screen> {
                 title: '2. CNIC Back Photo',
                 subtitle: 'Back side showing address and barcode',
                 icon: Icons.branding_watermark_outlined,
-                isUploaded: _isBackUploaded,
-                onTap: () {
-                  setState(() {
-                    _isBackUploaded = !_isBackUploaded;
-                  });
+                isUploaded: _back != null,
+                onTap: () async {
+                  final photo = await _pickDocument();
+                  if (photo != null && mounted) {
+                    setState(() => _back = photo);
+                  }
                 },
               ),
 
@@ -228,11 +247,12 @@ class _WorkerRegStep2ScreenState extends State<WorkerRegStep2Screen> {
                 title: '3. Selfie with CNIC',
                 subtitle: 'Clear portrait photo holding your CNIC card',
                 icon: Icons.camera_front_rounded,
-                isUploaded: _isSelfieUploaded,
-                onTap: () {
-                  setState(() {
-                    _isSelfieUploaded = !_isSelfieUploaded;
-                  });
+                isUploaded: _selfie != null,
+                onTap: () async {
+                  final photo = await _pickDocument();
+                  if (photo != null && mounted) {
+                    setState(() => _selfie = photo);
+                  }
                 },
               ),
 

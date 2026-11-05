@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/contact_launcher.dart';
+import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/custom_button.dart';
+import '../../../core/widgets/network_photo.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/worker_card.dart';
 import '../../../models/job_request_model.dart';
+import '../../../models/worker_model.dart';
 import '../../../state/app_state.dart';
 import '../customer_main_screen.dart';
 import '../worker_profile/worker_profile_screen.dart';
@@ -107,8 +111,11 @@ class RequestSentScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 6,
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -163,25 +170,9 @@ class RequestSentScreen extends StatelessWidget {
                           color: AppColors.secondaryText,
                         ),
                       ),
-                      if (liveRequest.hasVoiceNote) ...[
-                        const SizedBox(width: 16),
-                        const Icon(
-                          Icons.mic_rounded,
-                          size: 16,
-                          color: AppColors.primary,
-                        ),
-                        const SizedBox(width: 4),
-                        const Text(
-                          'Voice Note',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
                     ],
                   ),
+                  JobPhotoStrip(urls: liveRequest.photoUrls),
                 ],
               ),
             ),
@@ -280,6 +271,16 @@ class RequestSentScreen extends StatelessWidget {
 
             const SizedBox(height: 32),
 
+            if (liveRequest.status == 'Active' &&
+                liveRequest.interestedWorkers.isNotEmpty) ...[
+              CustomButton(
+                text: 'Mark Job Completed',
+                icon: Icons.task_alt_rounded,
+                onPressed: () => _completeJob(context, appState, liveRequest),
+              ),
+              const SizedBox(height: 12),
+            ],
+
             Row(
               children: [
                 Expanded(
@@ -288,19 +289,7 @@ class RequestSentScreen extends StatelessWidget {
                     type: ButtonType.outline,
                     textColor: AppColors.statusRed,
                     backgroundColor: AppColors.statusRed,
-                    onPressed: () {
-                      appState.closeJobRequest(liveRequest.id);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Job request closed.')),
-                      );
-                      Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              const CustomerMainScreen(initialTabIndex: 2),
-                        ),
-                        (route) => false,
-                      );
-                    },
+                    onPressed: () => _closeJob(context, appState, liveRequest),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -324,6 +313,74 @@ class RequestSentScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _closeJob(
+    BuildContext context,
+    AppState appState,
+    JobRequestModel job,
+  ) async {
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await appState.closeJobRequest(job.id);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Job request closed.')),
+      );
+      _goToRequests(navigator);
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(friendlyError(error))));
+    }
+  }
+
+  Future<void> _completeJob(
+    BuildContext context,
+    AppState appState,
+    JobRequestModel job,
+  ) async {
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final worker = await showModalBottomSheet<WorkerModel>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'Who did this job?',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+            for (final candidate in job.interestedWorkers)
+              ListTile(
+                leading: const Icon(Icons.engineering_rounded),
+                title: Text(candidate.name),
+                subtitle: Text(candidate.trade),
+                onTap: () => Navigator.pop(ctx, candidate),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (worker == null) return;
+
+    try {
+      await appState.completeJobRequest(job.id, worker.id);
+      _goToRequests(navigator);
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(friendlyError(error))));
+    }
+  }
+
+  void _goToRequests(NavigatorState navigator) {
+    navigator.pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => const CustomerMainScreen(initialTabIndex: 2),
+      ),
+      (route) => false,
     );
   }
 
@@ -385,14 +442,10 @@ class RequestSentScreen extends StatelessWidget {
             ),
             onPressed: () {
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    isWhatsApp
-                        ? 'Opening WhatsApp chat with ${worker.name}...'
-                        : 'Calling ${worker.name} at ${worker.phone}...',
-                  ),
-                ),
+              contactWorker(
+                context,
+                phone: worker.phone,
+                isWhatsApp: isWhatsApp,
               );
             },
             child: Text(isWhatsApp ? 'Open WhatsApp' : 'Call Now'),

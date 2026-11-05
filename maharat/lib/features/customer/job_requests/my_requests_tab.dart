@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/request_card.dart';
+import '../../../core/widgets/state_views.dart';
 import '../../../state/app_state.dart';
 import '../reviews/rate_experience_screen.dart';
 import 'request_job_screen.dart';
@@ -156,7 +158,34 @@ class _MyRequestsTabState extends State<MyRequestsTab>
     );
   }
 
+  Future<void> _closeRequest(BuildContext context, String jobId) async {
+    final appState = Provider.of<AppState>(context, listen: false);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await appState.closeJobRequest(jobId);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Job request closed.')),
+      );
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(friendlyError(error))));
+    }
+  }
+
   Widget _buildRequestList(List requests, String emptyMessage) {
+    final appState = Provider.of<AppState>(context);
+    if (requests.isEmpty && appState.jobRequests.isEmpty) {
+      if (appState.jobsStatus == LoadStatus.loading ||
+          appState.jobsStatus == LoadStatus.idle) {
+        return const LoadingView();
+      }
+      if (appState.jobsStatus == LoadStatus.error) {
+        return ErrorRetryView(
+          message: appState.jobsError ?? 'Could not load your requests.',
+          onRetry: appState.refreshJobs,
+        );
+      }
+    }
+
     if (requests.isEmpty) {
       return Center(
         child: Column(
@@ -180,40 +209,34 @@ class _MyRequestsTabState extends State<MyRequestsTab>
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: requests.length,
-      itemBuilder: (context, index) {
-        final request = requests[index];
-        return RequestCard(
-          request: request,
-          onTap: () {
-            if (request.status == 'Active') {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => RequestSentScreen(request: request),
-                ),
-              );
-            }
-          },
-          onCloseTap: request.status == 'Active'
-              ? () {
-                  final appState = Provider.of<AppState>(
-                    context,
-                    listen: false,
-                  );
-                  appState.closeJobRequest(request.id);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Job request closed.')),
-                  );
-                }
-              : null,
-          onRateTap:
-              request.status == 'Completed' && request.ratingGiven == null
-              ? () => _openRateScreen(context, request)
-              : null,
-        );
-      },
+    return RefreshIndicator(
+      onRefresh: appState.refreshJobs,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: requests.length,
+        itemBuilder: (context, index) {
+          final request = requests[index];
+          return RequestCard(
+            request: request,
+            onTap: () {
+              if (request.status == 'Active') {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => RequestSentScreen(request: request),
+                  ),
+                );
+              }
+            },
+            onCloseTap: request.status == 'Active'
+                ? () => _closeRequest(context, request.id)
+                : null,
+            onRateTap:
+                request.status == 'Completed' && request.ratingGiven == null
+                ? () => _openRateScreen(context, request)
+                : null,
+          );
+        },
+      ),
     );
   }
 

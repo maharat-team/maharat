@@ -12,7 +12,8 @@ import 'package:maharat/features/customer/worker_profile/worker_profile_screen.d
 import 'package:maharat/core/widgets/request_card.dart';
 import 'package:maharat/core/widgets/worker_card.dart';
 import 'package:maharat/features/onboarding/language_selection_screen.dart';
-import 'package:maharat/features/onboarding/phone_auth_screen.dart';
+import 'package:maharat/features/onboarding/email_auth_screen.dart';
+import 'package:maharat/features/onboarding/profile_setup_screen.dart';
 import 'package:maharat/features/onboarding/splash_screen.dart';
 import 'package:maharat/features/onboarding/user_type_selection_screen.dart';
 import 'package:maharat/features/worker/dashboard/worker_dashboard_screen.dart';
@@ -21,6 +22,7 @@ import 'package:maharat/features/worker/registration/worker_reg_step1_screen.dar
 import 'package:maharat/features/worker/registration/worker_reg_step2_screen.dart';
 import 'package:maharat/state/app_state.dart';
 import 'package:provider/provider.dart';
+import 'fixtures/fake_backend.dart';
 
 void main() {
   testWidgets('screens fit phone, tablet-width, and landscape viewports', (
@@ -30,7 +32,8 @@ void main() {
       ('splash', (_) => const SplashScreen()),
       ('language selection', (_) => const LanguageSelectionScreen()),
       ('role selection', (_) => const UserTypeSelectionScreen()),
-      ('phone authentication', (_) => const PhoneAuthScreen()),
+      ('email authentication', (_) => const EmailAuthScreen()),
+      ('profile setup', (_) => const ProfileSetupScreen()),
       (
         'worker card',
         (state) => Scaffold(
@@ -113,7 +116,7 @@ void main() {
     for (final size in sizes) {
       tester.view.physicalSize = size;
       for (final (name, buildScreen) in screenBuilders) {
-        final appState = AppState();
+        final appState = await seededAppState();
         await tester.pumpWidget(
           ChangeNotifierProvider.value(
             value: appState,
@@ -148,7 +151,7 @@ void main() {
     tester.view.resetDevicePixelRatio();
   });
 
-  testWidgets('phone entry remains scrollable with the keyboard visible', (
+  testWidgets('email entry remains scrollable with the keyboard visible', (
     tester,
   ) async {
     tester.view.devicePixelRatio = 1;
@@ -157,8 +160,8 @@ void main() {
 
     await tester.pumpWidget(
       ChangeNotifierProvider(
-        create: (_) => AppState(),
-        child: const MaterialApp(home: PhoneAuthScreen()),
+        create: (_) => FakeBackend(userId: null).createState(),
+        child: const MaterialApp(home: EmailAuthScreen()),
       ),
     );
     await tester.pump();

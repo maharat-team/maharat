@@ -1,10 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/error_messages.dart';
+import '../../../core/utils/image_picker_helper.dart';
 import '../../../core/widgets/custom_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
-import '../../../models/job_request_model.dart';
 import '../../../state/app_state.dart';
 import 'request_sent_screen.dart';
 
@@ -24,13 +26,10 @@ class _RequestJobScreenState extends State<RequestJobScreen> {
   late String _selectedLocation;
   String _selectedUrgency = 'Today'; // Today, Tomorrow, Any Day
 
-  // Voice note simulation state
-  bool _hasVoiceNote = false;
-  bool _isRecording = false;
-  int _recordingSeconds = 0;
+  static const _maxPhotos = 6;
 
-  // Photo attachments simulation state
-  final List<String> _attachedPhotoLabels = [];
+  final List<Uint8List> _photos = [];
+  bool _isSubmitting = false;
 
   @override
   void initState() {
@@ -38,7 +37,10 @@ class _RequestJobScreenState extends State<RequestJobScreen> {
     _selectedCategory =
         widget.initialCategory ?? AppConstants.categories.first.nameEn;
     final appState = Provider.of<AppState>(context, listen: false);
-    _selectedLocation = appState.currentUser.neighbourhood;
+    final home = appState.currentUser.neighbourhood;
+    _selectedLocation = AppConstants.bahawalpurNeighbourhoods.contains(home)
+        ? home
+        : AppConstants.bahawalpurNeighbourhoods.first;
   }
 
   @override
@@ -47,59 +49,40 @@ class _RequestJobScreenState extends State<RequestJobScreen> {
     super.dispose();
   }
 
-  void _toggleRecording() {
-    if (_isRecording) {
-      setState(() {
-        _isRecording = false;
-        _hasVoiceNote = true;
-        _recordingSeconds = 14;
-      });
-    } else {
-      setState(() {
-        _isRecording = true;
-        _recordingSeconds = 0;
-      });
+  Future<void> _addPhoto() async {
+    if (_photos.length >= _maxPhotos) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You can attach up to 6 photos.')),
+      );
+      return;
     }
+    final photo = await pickCompressedImage(context);
+    if (photo != null && mounted) setState(() => _photos.add(photo));
   }
 
-  void _addPhoto() {
-    setState(() {
-      _attachedPhotoLabels.add('Photo ${_attachedPhotoLabels.length + 1}');
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Photo attached successfully!')),
-    );
-  }
+  Future<void> _submitJobRequest() async {
+    if (!_formKey.currentState!.validate()) return;
 
-  void _submitJobRequest() {
-    if (_formKey.currentState!.validate()) {
-      final appState = Provider.of<AppState>(context, listen: false);
-      final newJob = JobRequestModel(
-        id: 'job_${DateTime.now().millisecondsSinceEpoch}',
-        customerName: appState.currentUser.name,
-        customerPhone: appState.currentUser.phone,
-        tradeCategory: _selectedCategory,
+    setState(() => _isSubmitting = true);
+    final appState = Provider.of<AppState>(context, listen: false);
+    try {
+      final job = await appState.createJobRequest(
+        trade: _selectedCategory,
         description: _descriptionController.text.trim(),
-        hasVoiceNote: _hasVoiceNote,
-        photoUrls: _attachedPhotoLabels,
         location: _selectedLocation,
         urgency: _selectedUrgency,
-        status: 'Active',
-        createdAt: DateTime.now(),
-        // Notify nearby workers simulation
-        interestedWorkers: appState.workers
-            .where(
-              (w) => w.trade.toLowerCase() == _selectedCategory.toLowerCase(),
-            )
-            .take(2)
-            .toList(),
+        photos: _photos,
       );
-
-      appState.addJobRequest(newJob);
-
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => RequestSentScreen(request: newJob)),
+        MaterialPageRoute(builder: (_) => RequestSentScreen(request: job)),
       );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(friendlyError(error))));
     }
   }
 
@@ -186,109 +169,9 @@ class _RequestJobScreenState extends State<RequestJobScreen> {
 
               const SizedBox(height: 20),
 
-              // 3. Voice Message UI Simulation
+              // 3. Photo Attachments
               const Text(
-                '3. Voice Note (Optional / اختیاری)',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primaryText,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: _toggleRecording,
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: _isRecording
-                              ? AppColors.statusRed
-                              : AppColors.primary,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          _isRecording ? Icons.stop_rounded : Icons.mic_rounded,
-                          color: AppColors.white,
-                          size: 24,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: _isRecording
-                          ? const Text(
-                              'Recording audio message... Tap red button to stop.',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.statusRed,
-                              ),
-                            )
-                          : _hasVoiceNote
-                          ? Row(
-                              children: [
-                                const Icon(
-                                  Icons.graphic_eq_rounded,
-                                  color: AppColors.primary,
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    'Voice Note Recorded (0:${_recordingSeconds.toString().padLeft(2, '0')})',
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.darkGreen,
-                                    ),
-                                  ),
-                                ),
-                                IconButton(
-                                  constraints: const BoxConstraints(
-                                    minWidth: 40,
-                                    minHeight: 40,
-                                  ),
-                                  padding: EdgeInsets.zero,
-                                  icon: const Icon(
-                                    Icons.delete_outline_rounded,
-                                    color: AppColors.secondaryText,
-                                    size: 20,
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _hasVoiceNote = false;
-                                    });
-                                  },
-                                ),
-                              ],
-                            )
-                          : const Text(
-                              'Tap mic icon to record voice explanation in Urdu/English.',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.secondaryText,
-                              ),
-                            ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // 4. Photo Attachments UI Simulation
-              const Text(
-                '4. Photo Attachments (Optional)',
+                '3. Photo Attachments (Optional)',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -338,35 +221,23 @@ class _RequestJobScreenState extends State<RequestJobScreen> {
                       height: 80,
                       child: ListView.builder(
                         scrollDirection: Axis.horizontal,
-                        itemCount: _attachedPhotoLabels.length,
+                        itemCount: _photos.length,
                         itemBuilder: (context, index) {
                           return Stack(
                             children: [
                               Container(
                                 width: 80,
                                 margin: const EdgeInsets.only(right: 8),
+                                clipBehavior: Clip.antiAlias,
                                 decoration: BoxDecoration(
                                   color: AppColors.lightMint,
                                   borderRadius: BorderRadius.circular(14),
                                   border: Border.all(color: AppColors.border),
                                 ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(
-                                      Icons.image_rounded,
-                                      color: AppColors.darkGreen,
-                                      size: 24,
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      _attachedPhotoLabels[index],
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
+                                child: Image.memory(
+                                  _photos[index],
+                                  fit: BoxFit.cover,
+                                  height: 80,
                                 ),
                               ),
                               Positioned(
@@ -375,7 +246,7 @@ class _RequestJobScreenState extends State<RequestJobScreen> {
                                 child: GestureDetector(
                                   onTap: () {
                                     setState(() {
-                                      _attachedPhotoLabels.removeAt(index);
+                                      _photos.removeAt(index);
                                     });
                                   },
                                   child: Container(
@@ -403,9 +274,9 @@ class _RequestJobScreenState extends State<RequestJobScreen> {
 
               const SizedBox(height: 20),
 
-              // 5. Location Selection
+              // 4. Location Selection
               const Text(
-                '5. Location in Bahawalpur',
+                '4. Location in Bahawalpur',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -447,9 +318,9 @@ class _RequestJobScreenState extends State<RequestJobScreen> {
 
               const SizedBox(height: 20),
 
-              // 6. Urgency Options
+              // 5. Urgency Options
               const Text(
-                '6. When do you need the service?',
+                '5. When do you need the service?',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -503,6 +374,7 @@ class _RequestJobScreenState extends State<RequestJobScreen> {
               CustomButton(
                 text: 'Send Job Request to Workers',
                 icon: Icons.send_rounded,
+                isLoading: _isSubmitting,
                 onPressed: _submitJobRequest,
               ),
               const SizedBox(height: 20),

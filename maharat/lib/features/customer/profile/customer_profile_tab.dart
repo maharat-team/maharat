@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/custom_button.dart';
 import '../../../models/user_profile_model.dart';
 import '../../../state/app_state.dart';
@@ -330,13 +331,16 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
               textColor: AppColors.statusRed,
               backgroundColor: AppColors.statusRed,
               icon: Icons.logout_rounded,
-              onPressed: () {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(
-                    builder: (_) => const LanguageSelectionScreen(),
-                  ),
-                  (route) => false,
-                );
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                try {
+                  // MaharatApp returns to onboarding when the session ends.
+                  await appState.signOut();
+                } catch (error) {
+                  messenger.showSnackBar(
+                    SnackBar(content: Text(friendlyError(error))),
+                  );
+                }
               },
             ),
 
@@ -415,12 +419,19 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              appState.updateProfile(
-                name: nameCtrl.text.trim(),
-                phone: phoneCtrl.text.trim(),
-              );
-              Navigator.pop(ctx);
+            onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              try {
+                await appState.updateProfile(
+                  name: nameCtrl.text,
+                  phone: phoneCtrl.text,
+                );
+                if (ctx.mounted) Navigator.pop(ctx);
+              } catch (error) {
+                messenger.showSnackBar(
+                  SnackBar(content: Text(friendlyError(error))),
+                );
+              }
             },
             child: const Text('Save Changes'),
           ),
@@ -447,9 +458,16 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
                 trailing: appState.currentUser.neighbourhood == area
                     ? const Icon(Icons.check_rounded, color: AppColors.primary)
                     : null,
-                onTap: () {
-                  appState.updateProfile(neighbourhood: area);
+                onTap: () async {
+                  final messenger = ScaffoldMessenger.of(context);
                   Navigator.pop(ctx);
+                  try {
+                    await appState.updateProfile(neighbourhood: area);
+                  } catch (error) {
+                    messenger.showSnackBar(
+                      SnackBar(content: Text(friendlyError(error))),
+                    );
+                  }
                 },
               );
             },

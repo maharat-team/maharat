@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/contact_launcher.dart';
 import '../../../core/widgets/custom_button.dart';
 import '../../../core/widgets/section_header.dart';
+import '../../../core/widgets/work_photo_gallery.dart';
 import '../../../models/worker_model.dart';
 
 class WorkerProfileScreen extends StatelessWidget {
@@ -123,14 +125,16 @@ class WorkerProfileScreen extends StatelessWidget {
                                       color: AppColors.primary,
                                     ),
                                     SizedBox(width: 4),
-                                    Text(
-                                      'CNIC Verified Tradesperson',
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.darkGreen,
+                                    Flexible(
+                                      child: Text(
+                                        'CNIC Verified Tradesperson',
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.darkGreen,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -269,46 +273,10 @@ class WorkerProfileScreen extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // Sample Work Photo Gallery
+            // Work Photo Gallery
             const SectionHeader(title: 'Sample Work Gallery'),
             const SizedBox(height: 8),
-            SizedBox(
-              height: 110,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: 4,
-                itemBuilder: (context, index) {
-                  return Container(
-                    width: 130,
-                    margin: const EdgeInsets.only(right: 12),
-                    decoration: BoxDecoration(
-                      color: AppColors.lightMint,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.handyman_rounded,
-                          size: 32,
-                          color: AppColors.primary.withAlpha(150),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Project ${index + 1}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.darkGreen,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
+            WorkPhotoGallery(photos: worker.workPhotos),
 
             const SizedBox(height: 20),
 
@@ -563,14 +531,10 @@ class WorkerProfileScreen extends StatelessWidget {
             ),
             onPressed: () {
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    isWhatsApp
-                        ? 'Opening WhatsApp chat with ${worker.name}...'
-                        : 'Dialing ${worker.name} (${worker.phone})...',
-                  ),
-                ),
+              contactWorker(
+                context,
+                phone: worker.phone,
+                isWhatsApp: isWhatsApp,
               );
             },
             child: Text(isWhatsApp ? 'Open WhatsApp' : 'Call Now'),

@@ -1,282 +1,74 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
+import '../core/utils/error_messages.dart';
+import '../core/utils/phone_utils.dart';
+import '../models/job_request_model.dart';
 import '../models/user_profile_model.dart';
 import '../models/worker_model.dart';
-import '../models/job_request_model.dart';
-import '../models/review_model.dart';
+import '../services/auth_service.dart';
+import '../services/job_service.dart';
+import '../services/profile_service.dart';
+import '../services/review_service.dart';
+import '../services/storage_service.dart';
+import '../services/worker_service.dart';
+
+enum LoadStatus { idle, loading, ready, error }
 
 class AppState extends ChangeNotifier {
-  UserProfileModel _currentUser = UserProfileModel(
-    name: 'Ahmed Khan',
-    phone: '+92 300 1234567',
-    userRole: UserRole.customer,
-    language: 'English',
-    neighbourhood: 'Model Town A',
-    isWorkerRegistered: false,
-    isCnicVerified: false,
-  );
+  AppState({
+    AuthService? auth,
+    ProfileService? profiles,
+    WorkerService? workers,
+    JobService? jobs,
+    ReviewService? reviews,
+    StorageService? storage,
+  }) : _auth = auth ?? AuthService(),
+       _profiles = profiles ?? ProfileService(),
+       _workerService = workers ?? WorkerService(),
+       _jobService = jobs ?? JobService(),
+       _reviews = reviews ?? ReviewService(),
+       _storage = storage ?? StorageService();
 
-  WorkerModel _workerProfile = WorkerModel(
-    id: 'w_user_1',
-    name: 'Ahmed Khan',
-    trade: 'Electrician',
-    phone: '+92 300 1234567',
-    rating: 4.8,
-    reviewCount: 14,
-    experienceYears: 5,
-    visitFee: 300,
-    neighbourhood: 'Model Town A',
-    serviceAreas: ['Model Town A', 'Model Town B', 'Satellite Town'],
-    bio: 'Experienced electrician specializing in residential wiring, breaker panels, UPS setup, and LED lighting solutions.',
-    isCnicVerified: true,
-    isAvailableToday: true,
-    workPhotos: [],
-    reviews: [
-      ReviewModel(
-        id: 'r_w1',
-        customerName: 'Muhammad Salman',
-        rating: 5.0,
-        comment: 'Quick response and fixed the main breaker issue within 30 minutes.',
-        tags: ['On time', 'Fair price', 'Skilled'],
-        date: '2 days ago',
-      ),
-    ],
-    completedJobsCount: 18,
-  );
+  final AuthService _auth;
+  final ProfileService _profiles;
+  final WorkerService _workerService;
+  final JobService _jobService;
+  final ReviewService _reviews;
+  final StorageService _storage;
 
-  final List<WorkerModel> _workers = [
-    WorkerModel(
-      id: 'w_1',
-      name: 'Mohammad Tariq',
-      trade: 'Electrician',
-      phone: '+92 301 8765432',
-      rating: 4.9,
-      reviewCount: 42,
-      experienceYears: 8,
-      visitFee: 300,
-      neighbourhood: 'Model Town A',
-      serviceAreas: ['Model Town A', 'Model Town B', 'Satellite Town', 'Dubai Mahal Road'],
-      bio: 'Certified Master Electrician with 8+ years experience in Bahawalpur. Expert in short circuit troubleshooting, UPS installation, DB boxes, and smart home wiring.',
-      isCnicVerified: true,
-      isAvailableToday: true,
-      workPhotos: [
-        'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=600&q=80',
-        'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=600&q=80',
-      ],
-      reviews: [
-        ReviewModel(
-          id: 'r1',
-          customerName: 'Usman Ali',
-          rating: 5.0,
-          comment: 'Very professional electrician. Fixed the short circuit in my house cleanly and charged fair rate.',
-          tags: ['On time', 'Clean work', 'Fair price'],
-          date: 'Yesterday',
-        ),
-        ReviewModel(
-          id: 'r2',
-          customerName: 'Dr. Shahzad',
-          rating: 4.8,
-          comment: 'Arrived on time and explained the issue with UPS wiring clearly.',
-          tags: ['Polite', 'Explained well'],
-          date: '4 days ago',
-        ),
-      ],
-      completedJobsCount: 84,
-    ),
-    WorkerModel(
-      id: 'w_2',
-      name: 'Rashid Mahmood',
-      trade: 'Plumber',
-      phone: '+92 302 9876543',
-      rating: 4.8,
-      reviewCount: 58,
-      experienceYears: 12,
-      visitFee: 200,
-      neighbourhood: 'Satellite Town',
-      serviceAreas: ['Satellite Town', 'Model Town A', 'One Unit Staff Colony', 'Commercial Area'],
-      bio: 'Expert plumber for water tank cleaning, concealed pipe leaks, bathroom sanitary fittings, and motor installation.',
-      isCnicVerified: true,
-      isAvailableToday: true,
-      workPhotos: [],
-      reviews: [
-        ReviewModel(
-          id: 'r3',
-          customerName: 'Bilal Hassan',
-          rating: 5.0,
-          comment: 'Resolved severe water blockage in master bathroom. Highly recommended!',
-          tags: ['Skilled', 'Clean work'],
-          date: '3 days ago',
-        ),
-      ],
-      completedJobsCount: 110,
-    ),
-    WorkerModel(
-      id: 'w_3',
-      name: 'Umer Farooq',
-      trade: 'AC Technician',
-      phone: '+92 303 1122334',
-      rating: 4.9,
-      reviewCount: 31,
-      experienceYears: 6,
-      visitFee: 500,
-      neighbourhood: 'Model Town B',
-      serviceAreas: ['Model Town A', 'Model Town B', 'University Town', 'Cantonment'],
-      bio: 'Inverter AC specialist. Complete jet wash service, R410/R32 gas charging, PCB repair, and new unit installation.',
-      isCnicVerified: true,
-      isAvailableToday: true,
-      workPhotos: [],
-      reviews: [
-        ReviewModel(
-          id: 'r4',
-          customerName: 'Tariq Jameel',
-          rating: 5.0,
-          comment: 'Did complete chemical wash of my split AC. Cooling is now amazing!',
-          tags: ['Clean work', 'Explained well', 'On time'],
-          date: '1 week ago',
-        ),
-      ],
-      completedJobsCount: 52,
-    ),
-    WorkerModel(
-      id: 'w_4',
-      name: 'Master Ghulam Abbas',
-      trade: 'Mason',
-      phone: '+92 304 4455667',
-      rating: 4.7,
-      reviewCount: 64,
-      experienceYears: 15,
-      visitFee: 0,
-      neighbourhood: 'One Unit Staff Colony',
-      serviceAreas: ['One Unit Staff Colony', 'Farid Gate', 'Trust Colony', 'Satellite Town'],
-      bio: 'Master mason with 15 years experience in tile fitting, boundary walls, floor plaster, and brick renovation.',
-      isCnicVerified: true,
-      isAvailableToday: true,
-      workPhotos: [],
-      reviews: [
-        ReviewModel(
-          id: 'r5',
-          customerName: 'Kashif Mehmood',
-          rating: 4.5,
-          comment: 'Did excellent tile work in kitchen. Solid craftsmanship.',
-          tags: ['Skilled', 'Fair price'],
-          date: '2 weeks ago',
-        ),
-      ],
-      completedJobsCount: 140,
-    ),
-    WorkerModel(
-      id: 'w_5',
-      name: 'Khalid Hussain',
-      trade: 'Carpenter',
-      phone: '+92 305 7788990',
-      rating: 4.8,
-      reviewCount: 29,
-      experienceYears: 10,
-      visitFee: 300,
-      neighbourhood: 'Dubai Mahal Road',
-      serviceAreas: ['Dubai Mahal Road', 'Model Town A', 'Cantonment'],
-      bio: 'Custom wooden door installation, lock replacement, wardrobe repair, and polish work.',
-      isCnicVerified: true,
-      isAvailableToday: false,
-      workPhotos: [],
-      reviews: [],
-      completedJobsCount: 45,
-    ),
-    WorkerModel(
-      id: 'w_6',
-      name: 'Asif Raza',
-      trade: 'Painter',
-      phone: '+92 306 3344556',
-      rating: 4.6,
-      reviewCount: 22,
-      experienceYears: 7,
-      visitFee: 0,
-      neighbourhood: 'University Town',
-      serviceAreas: ['University Town', 'Model Town B', 'Trust Colony'],
-      bio: 'Interior plastic emulsion, exterior weather sheet coating, wood varnish, and wall putty finish.',
-      isCnicVerified: true,
-      isAvailableToday: true,
-      workPhotos: [],
-      reviews: [],
-      completedJobsCount: 38,
-    ),
-    WorkerModel(
-      id: 'w_7',
-      name: 'Zubair Ahmed',
-      trade: 'Electrician',
-      phone: '+92 307 2233445',
-      rating: 4.7,
-      reviewCount: 19,
-      experienceYears: 5,
-      visitFee: 250,
-      neighbourhood: 'Cantonment',
-      serviceAreas: ['Cantonment', 'Model Town A', 'Satellite Town'],
-      bio: 'Fast electrician for ceiling lights, fancy lights, washing machine motor wiring, and main switchboard repair.',
-      isCnicVerified: true,
-      isAvailableToday: true,
-      workPhotos: [],
-      reviews: [],
-      completedJobsCount: 29,
-    ),
-  ];
+  UserProfileModel _currentUser = UserProfileModel.guest();
+  WorkerModel? _workerProfile;
+  String? _rejectionReason;
+  List<WorkerModel> _workers = const [];
+  List<JobRequestModel> _jobRequests = const [];
+  List<JobRequestModel> _nearbyJobs = const [];
 
-  late List<JobRequestModel> _jobRequests;
+  LoadStatus _workersStatus = LoadStatus.idle;
+  LoadStatus _jobsStatus = LoadStatus.idle;
+  String? _workersError;
+  String? _jobsError;
 
-  AppState() {
-    _jobRequests = [
-      JobRequestModel(
-        id: 'job_101',
-        customerName: 'Ahmed Khan',
-        customerPhone: '+92 300 1234567',
-        tradeCategory: 'Electrician',
-        description: 'UPS battery wiring is sparky and living room ceiling fan switch needs replacement.',
-        hasVoiceNote: true,
-        photoUrls: ['https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=400&q=80'],
-        location: 'Model Town A',
-        urgency: 'Today',
-        status: 'Active',
-        createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-        interestedWorkers: [
-          _workers[0], // Mohammad Tariq
-          _workers[6], // Zubair Ahmed
-        ],
-      ),
-      JobRequestModel(
-        id: 'job_102',
-        customerName: 'Ahmed Khan',
-        customerPhone: '+92 300 1234567',
-        tradeCategory: 'Plumber',
-        description: 'Kitchen sink tap leaking heavily and main bathroom water line pressure is low.',
-        location: 'Satellite Town',
-        urgency: 'Tomorrow',
-        status: 'Active',
-        createdAt: DateTime.now().subtract(const Duration(hours: 5)),
-        interestedWorkers: [
-          _workers[1], // Rashid Mahmood
-        ],
-      ),
-      JobRequestModel(
-        id: 'job_103',
-        customerName: 'Ahmed Khan',
-        customerPhone: '+92 300 1234567',
-        tradeCategory: 'AC Technician',
-        description: 'Split AC 1.5 Ton Master Chemical Wash & Gas Refill before summer.',
-        location: 'Model Town A',
-        urgency: 'Any Day',
-        status: 'Completed',
-        createdAt: DateTime.now().subtract(const Duration(days: 3)),
-        interestedWorkers: [_workers[2]],
-        assignedWorkerName: 'Umer Farooq',
-        ratingGiven: 5.0,
-        reviewComment: 'Outstanding service by Umer Farooq. Cooling performance restored completely.',
-      ),
-    ];
-  }
+  StreamSubscription<void>? _signedOutSubscription;
+  Object? _interestSubscription;
+  Timer? _refreshDebounce;
+
+  /// Called when the session ends for any reason, so the UI can leave
+  /// protected screens.
+  VoidCallback? onSessionEnded;
 
   // Getters
+  bool get isAuthenticated => _auth.currentUserId != null;
   UserProfileModel get currentUser => _currentUser;
-  WorkerModel get workerProfile => _workerProfile;
+  WorkerModel get workerProfile => _workerProfile ?? WorkerModel.empty();
+  String? get rejectionReason => _rejectionReason;
   List<WorkerModel> get workers => List.unmodifiable(_workers);
   List<JobRequestModel> get jobRequests => List.unmodifiable(_jobRequests);
+  List<JobRequestModel> get nearbyJobRequests => List.unmodifiable(_nearbyJobs);
+
+  LoadStatus get workersStatus => _workersStatus;
+  LoadStatus get jobsStatus => _jobsStatus;
+  String? get workersError => _workersError;
+  String? get jobsError => _jobsError;
 
   List<JobRequestModel> get activeJobRequests =>
       _jobRequests.where((j) => j.status == 'Active').toList();
@@ -287,127 +79,370 @@ class AppState extends ChangeNotifier {
   List<JobRequestModel> get closedJobRequests =>
       _jobRequests.where((j) => j.status == 'Closed').toList();
 
-  // Setters & Actions
+  bool isUrdu() => _currentUser.language == 'Urdu';
+
+  String get _userId {
+    final id = _auth.currentUserId;
+    if (id == null) throw const FormatException('Please sign in again.');
+    return id;
+  }
+
+  // Session
+
+  /// Restores a persisted session. Throws if a session exists but the profile
+  /// cannot be loaded, so the caller can offer a retry.
+  Future<void> bootstrap() async {
+    _signedOutSubscription ??= _auth.onSignedOut.listen(
+      (_) => _handleSignedOut(),
+    );
+    if (isAuthenticated) await _loadSession();
+  }
+
+  Future<void> sendEmailOtp(String email) => _auth.sendEmailOtp(email);
+
+  /// Verifies the code, then applies the choices made during onboarding.
+  Future<void> verifyEmailOtp(String email, String code) async {
+    final language = _currentUser.language;
+    final role = _currentUser.userRole;
+    await _auth.verifyEmailOtp(email, code);
+    await _loadSession(language: language, role: role);
+  }
+
+  Future<void> signOut() async {
+    await _auth.signOut();
+    _handleSignedOut();
+  }
+
+  Future<void> _loadSession({String? language, UserRole? role}) async {
+    final userId = _userId;
+    var profile = await _profiles.fetch(userId);
+
+    final changes = <String, dynamic>{};
+    if (language != null && language != profile.language) {
+      changes['language'] = language;
+    }
+    if (role != null && role != profile.userRole) {
+      changes['active_role'] = role.name;
+    }
+    if (changes.isNotEmpty) {
+      await _profiles.update(userId, changes);
+      profile = profile.copyWith(language: language, userRole: role);
+    }
+
+    _currentUser = profile;
+    await _refreshOwnWorker();
+    notifyListeners();
+    await refreshAll();
+    _listenForInterests();
+  }
+
+  Future<void> _refreshOwnWorker() async {
+    final userId = _userId;
+    final worker = await _workerService.fetchOwn(userId);
+    _workerProfile = worker;
+    _rejectionReason = worker?.verificationStatus == VerificationStatus.rejected
+        ? await _workerService.fetchRejectionReason(userId)
+        : null;
+    _currentUser = _currentUser.copyWith(
+      isWorkerRegistered: worker != null,
+      isCnicVerified: worker?.isCnicVerified ?? false,
+    );
+  }
+
+  void _handleSignedOut() {
+    final wasSignedIn = _currentUser.id.isNotEmpty;
+    final subscription = _interestSubscription;
+    _interestSubscription = null;
+    if (subscription != null) unawaited(_jobService.unsubscribe(subscription));
+    _refreshDebounce?.cancel();
+
+    _currentUser = UserProfileModel.guest();
+    _workerProfile = null;
+    _rejectionReason = null;
+    _workers = const [];
+    _jobRequests = const [];
+    _nearbyJobs = const [];
+    _workersStatus = LoadStatus.idle;
+    _jobsStatus = LoadStatus.idle;
+    notifyListeners();
+    if (wasSignedIn) onSessionEnded?.call();
+  }
+
+  void _listenForInterests() {
+    if (_interestSubscription != null) return;
+    try {
+      _interestSubscription = _jobService.subscribeToInterests(() {
+        _refreshDebounce?.cancel();
+        _refreshDebounce = Timer(
+          const Duration(milliseconds: 400),
+          refreshJobs,
+        );
+      });
+    } catch (error) {
+      // Live updates are an enhancement; pull-to-refresh still works.
+      debugPrint('Realtime unavailable: $error');
+    }
+  }
+
+  // Loading
+
+  Future<void> refreshAll() => Future.wait([refreshWorkers(), refreshJobs()]);
+
+  Future<void> refreshWorkers() async {
+    _workersStatus = LoadStatus.loading;
+    _workersError = null;
+    notifyListeners();
+    try {
+      _workers = await _workerService.fetchDirectory();
+      _workersStatus = LoadStatus.ready;
+    } catch (error) {
+      _workersError = friendlyError(error);
+      _workersStatus = LoadStatus.error;
+    }
+    notifyListeners();
+  }
+
+  Future<void> refreshJobs() async {
+    if (!isAuthenticated) return;
+    _jobsStatus = LoadStatus.loading;
+    _jobsError = null;
+    notifyListeners();
+    try {
+      final userId = _userId;
+      // Picks up an approval or rejection made since the last load.
+      await _refreshOwnWorker();
+      final worker = _workerProfile;
+      final results = await Future.wait([
+        _jobService.fetchCustomerJobs(userId),
+        if (worker != null && worker.isCnicVerified)
+          _jobService.fetchNearbyJobs(
+            userId: userId,
+            trade: worker.trade,
+            serviceAreas: worker.serviceAreas,
+          ),
+      ]);
+      _jobRequests = results.first;
+      _nearbyJobs = results.length > 1 ? results[1] : const [];
+      _jobsStatus = LoadStatus.ready;
+    } catch (error) {
+      _jobsError = friendlyError(error);
+      _jobsStatus = LoadStatus.error;
+    }
+    notifyListeners();
+  }
+
+  // Preferences. Before sign-in these are held locally and saved afterwards.
+
   void setLanguage(String lang) {
     _currentUser = _currentUser.copyWith(language: lang);
     notifyListeners();
+    _savePreference({'language': lang});
   }
 
   void setUserRole(UserRole role) {
     _currentUser = _currentUser.copyWith(userRole: role);
     notifyListeners();
+    _savePreference({'active_role': role.name});
   }
 
-  void updateProfile({String? name, String? phone, String? neighbourhood}) {
+  void _savePreference(Map<String, dynamic> fields) {
+    final userId = _auth.currentUserId;
+    if (userId == null) return;
+    _profiles.update(userId, fields).catchError((Object error) {
+      debugPrint('Could not save preference: $error');
+    });
+  }
+
+  // Profile
+
+  Future<void> updateProfile({
+    String? name,
+    String? phone,
+    String? neighbourhood,
+  }) async {
+    final normalizedPhone = phone == null ? null : PhoneUtils.normalize(phone);
+    if (phone != null && normalizedPhone == null) {
+      throw const FormatException(PhoneUtils.invalidMessage);
+    }
+    final trimmedName = name?.trim();
+    if (trimmedName != null && trimmedName.isEmpty) {
+      throw const FormatException('Please enter your name.');
+    }
+
+    await _profiles.update(_userId, {
+      'full_name': ?trimmedName,
+      'phone': ?normalizedPhone,
+      'neighbourhood': ?neighbourhood,
+    });
     _currentUser = _currentUser.copyWith(
-      name: name ?? _currentUser.name,
-      phone: phone ?? _currentUser.phone,
-      neighbourhood: neighbourhood ?? _currentUser.neighbourhood,
+      name: trimmedName,
+      phone: normalizedPhone,
+      neighbourhood: neighbourhood,
     );
-    notifyListeners();
-  }
-
-  void addJobRequest(JobRequestModel newJob) {
-    _jobRequests.insert(0, newJob);
-    notifyListeners();
-  }
-
-  void closeJobRequest(String jobId) {
-    final index = _jobRequests.indexWhere((j) => j.id == jobId);
-    if (index != -1) {
-      _jobRequests[index] = _jobRequests[index].copyWith(status: 'Closed');
-      notifyListeners();
+    if (trimmedName != null) {
+      _workerProfile = _workerProfile?.copyWith(name: trimmedName);
     }
+    notifyListeners();
   }
 
-  void completeJobRequest(String jobId, {String? workerName}) {
-    final index = _jobRequests.indexWhere((j) => j.id == jobId);
-    if (index != -1) {
-      _jobRequests[index] = _jobRequests[index].copyWith(
-        status: 'Completed',
-        assignedWorkerName: workerName ?? _jobRequests[index].assignedWorkerName,
+  // Jobs
+
+  Future<JobRequestModel> createJobRequest({
+    required String trade,
+    required String description,
+    required String location,
+    required String urgency,
+    required List<Uint8List> photos,
+  }) async {
+    final paths = await _storage.uploadJobPhotos(_userId, photos);
+    try {
+      final job = await _jobService.create(
+        trade: trade,
+        description: description,
+        location: location,
+        urgency: urgency,
+        photoPaths: paths,
       );
+      _jobRequests = [job, ..._jobRequests];
       notifyListeners();
+      return job;
+    } catch (_) {
+      await _storage.deleteJobPhotos(paths);
+      rethrow;
     }
   }
 
-  void addReviewToWorker({
+  void _replaceJob(
+    String jobId,
+    JobRequestModel Function(JobRequestModel) update,
+  ) {
+    _jobRequests = [
+      for (final job in _jobRequests) job.id == jobId ? update(job) : job,
+    ];
+    notifyListeners();
+  }
+
+  Future<void> closeJobRequest(String jobId) async {
+    await _jobService.close(jobId);
+    _replaceJob(jobId, (job) => job.copyWith(status: 'Closed'));
+  }
+
+  Future<void> completeJobRequest(String jobId, String workerId) async {
+    await _jobService.complete(jobId, workerId);
+    _replaceJob(
+      jobId,
+      (job) => job.copyWith(status: 'Completed', assignedWorkerId: workerId),
+    );
+  }
+
+  Future<void> addReviewToWorker({
     required String workerId,
     required String jobId,
     required double rating,
     required String comment,
     required List<String> tags,
-  }) {
-    final workerIndex = _workers.indexWhere((w) => w.id == workerId);
-    if (workerIndex != -1) {
-      final worker = _workers[workerIndex];
-      final newReview = ReviewModel(
-        id: 'r_${DateTime.now().millisecondsSinceEpoch}',
-        customerName: _currentUser.name,
-        rating: rating,
-        comment: comment,
-        tags: tags,
-        date: 'Just now',
-      );
-
-      final updatedReviews = List<ReviewModel>.from(worker.reviews)..insert(0, newReview);
-      final newCount = worker.reviewCount + 1;
-      final newAvgRating = double.parse(
-        (((worker.rating * worker.reviewCount) + rating) / newCount).toStringAsFixed(1),
-      );
-
-      _workers[workerIndex] = worker.copyWith(
-        rating: newAvgRating,
-        reviewCount: newCount,
-        reviews: updatedReviews,
-        completedJobsCount: worker.completedJobsCount + 1,
-      );
-    }
-
-    // Update job request
-    final jobIndex = _jobRequests.indexWhere((j) => j.id == jobId);
-    if (jobIndex != -1) {
-      _jobRequests[jobIndex] = _jobRequests[jobIndex].copyWith(
-        ratingGiven: rating,
-        reviewComment: comment,
-      );
-    }
-
-    notifyListeners();
-  }
-
-  void registerWorker(WorkerModel newWorker) {
-    _workerProfile = newWorker;
-    _currentUser = _currentUser.copyWith(
-      isWorkerRegistered: true,
-      userRole: UserRole.worker,
+  }) async {
+    await _reviews.create(
+      jobId: jobId,
+      workerId: workerId,
+      rating: rating,
+      comment: comment,
+      tags: tags,
     );
-    _workers.insert(0, newWorker);
+    _replaceJob(
+      jobId,
+      (job) => job.copyWith(ratingGiven: rating, reviewComment: comment),
+    );
+    unawaited(refreshWorkers());
+  }
+
+  // Worker
+
+  /// Uploads the CNIC images, then submits everything in one transaction.
+  /// The worker stays pending until an admin approves them.
+  Future<void> registerWorker(
+    WorkerApplication application, {
+    required Uint8List front,
+    required Uint8List back,
+    required Uint8List selfie,
+  }) async {
+    final userId = _userId;
+    final paths = await Future.wait([
+      _storage.uploadCnicDocument(userId, 'front', front),
+      _storage.uploadCnicDocument(userId, 'back', back),
+      _storage.uploadCnicDocument(userId, 'selfie', selfie),
+    ]);
+    await _workerService.submitApplication(
+      application,
+      frontPath: paths[0],
+      backPath: paths[1],
+      selfiePath: paths[2],
+    );
+    _currentUser = _currentUser.copyWith(userRole: UserRole.worker);
+    await _refreshOwnWorker();
     notifyListeners();
   }
 
-  void setWorkerCnicVerified(bool status) {
-    _workerProfile = _workerProfile.copyWith(isCnicVerified: status);
-    _currentUser = _currentUser.copyWith(isCnicVerified: status);
+  Future<void> toggleWorkerAvailability(bool isAvailable) async {
+    final worker = _workerProfile;
+    if (worker == null) return;
+    _workerProfile = worker.copyWith(isAvailableToday: isAvailable);
     notifyListeners();
-  }
-
-  void toggleWorkerAvailability(bool isAvailable) {
-    _workerProfile = _workerProfile.copyWith(isAvailableToday: isAvailable);
-    notifyListeners();
-  }
-
-  void workerRespondToJob(String jobId) {
-    final index = _jobRequests.indexWhere((j) => j.id == jobId);
-    if (index != -1) {
-      final job = _jobRequests[index];
-      if (!job.interestedWorkers.any((w) => w.id == _workerProfile.id)) {
-        final updatedInterested = List<WorkerModel>.from(job.interestedWorkers)..add(_workerProfile);
-        _jobRequests[index] = job.copyWith(interestedWorkers: updatedInterested);
-        notifyListeners();
-      }
+    try {
+      await _workerService.setAvailability(worker.id, isAvailable);
+    } catch (_) {
+      _workerProfile = worker;
+      notifyListeners();
+      rethrow;
     }
   }
 
-  bool isUrdu() => _currentUser.language == 'Urdu';
+  Future<void> workerRespondToJob(String jobId) async {
+    final worker = _workerProfile;
+    if (worker == null) return;
+    await _jobService.expressInterest(jobId, worker.id);
+    _nearbyJobs = [
+      for (final job in _nearbyJobs)
+        job.id == jobId
+            ? job.copyWith(
+                interestedWorkers: [...job.interestedWorkers, worker],
+              )
+            : job,
+    ];
+    notifyListeners();
+  }
+
+  Future<void> addWorkPhoto(Uint8List photo) async {
+    final worker = _workerProfile;
+    if (worker == null) return;
+    final path = await _storage.uploadWorkPhoto(worker.id, photo);
+    try {
+      final added = await _workerService.addPhoto(worker.id, path);
+      _workerProfile = worker.copyWith(
+        workPhotos: [added, ...worker.workPhotos],
+      );
+      notifyListeners();
+    } catch (_) {
+      await _storage.deleteWorkPhoto(path);
+      rethrow;
+    }
+  }
+
+  Future<void> deleteWorkPhoto(WorkPhoto photo) async {
+    final worker = _workerProfile;
+    if (worker == null) return;
+    await _workerService.deletePhoto(photo.id);
+    _workerProfile = worker.copyWith(
+      workPhotos: worker.workPhotos.where((p) => p.id != photo.id).toList(),
+    );
+    notifyListeners();
+    await _storage.deleteWorkPhoto(photo.path);
+  }
+
+  @override
+  void dispose() {
+    _signedOutSubscription?.cancel();
+    _refreshDebounce?.cancel();
+    super.dispose();
+  }
 }

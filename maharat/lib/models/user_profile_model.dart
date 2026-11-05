@@ -1,6 +1,7 @@
 enum UserRole { customer, worker }
 
 class UserProfileModel {
+  final String id;
   final String name;
   final String phone;
   final UserRole userRole;
@@ -10,6 +11,7 @@ class UserProfileModel {
   final bool isCnicVerified;
 
   UserProfileModel({
+    this.id = '',
     required this.name,
     required this.phone,
     required this.userRole,
@@ -19,7 +21,30 @@ class UserProfileModel {
     this.isCnicVerified = false,
   });
 
+  factory UserProfileModel.guest() => UserProfileModel(
+    name: '',
+    phone: '',
+    userRole: UserRole.customer,
+    language: 'English',
+    neighbourhood: '',
+  );
+
+  factory UserProfileModel.fromJson(Map<String, dynamic> json) {
+    return UserProfileModel(
+      id: json['id'] as String,
+      name: json['full_name'] as String? ?? '',
+      phone: json['phone'] as String? ?? '',
+      userRole: UserRole.values.byName(json['active_role'] as String),
+      language: json['language'] as String? ?? 'English',
+      neighbourhood: json['neighbourhood'] as String? ?? '',
+    );
+  }
+
+  bool get isComplete =>
+      name.trim().isNotEmpty && phone.isNotEmpty && neighbourhood.isNotEmpty;
+
   UserProfileModel copyWith({
+    String? id,
     String? name,
     String? phone,
     UserRole? userRole,
@@ -29,6 +54,7 @@ class UserProfileModel {
     bool? isCnicVerified,
   }) {
     return UserProfileModel(
+      id: id ?? this.id,
       name: name ?? this.name,
       phone: phone ?? this.phone,
       userRole: userRole ?? this.userRole,

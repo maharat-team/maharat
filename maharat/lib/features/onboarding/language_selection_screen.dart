@@ -94,6 +94,10 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
                             listen: false,
                           );
                           appState.setLanguage(_selectedLang);
+                          if (appState.isAuthenticated) {
+                            Navigator.of(context).pop();
+                            return;
+                          }
                           Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => const UserTypeSelectionScreen(),

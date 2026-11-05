@@ -4,13 +4,14 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/custom_button.dart';
 import '../../models/user_profile_model.dart';
 import '../../state/app_state.dart';
-import 'phone_auth_screen.dart';
+import 'email_auth_screen.dart';
 
 class UserTypeSelectionScreen extends StatefulWidget {
   const UserTypeSelectionScreen({super.key});
 
   @override
-  State<UserTypeSelectionScreen> createState() => _UserTypeSelectionScreenState();
+  State<UserTypeSelectionScreen> createState() =>
+      _UserTypeSelectionScreenState();
 }
 
 class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
@@ -60,7 +61,8 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
                         role: UserRole.customer,
                         title: 'I need a worker',
                         urduTitle: 'مجھے کاریگر چاہیے',
-                        description: 'Find plumber, electrician, carpenter, AC tech & more nearby in Bahawalpur.',
+                        description:
+                            'Find plumber, electrician, carpenter, AC tech & more nearby in Bahawalpur.',
                         icon: Icons.search_rounded,
                       ),
                       const SizedBox(height: 16),
@@ -68,7 +70,8 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
                         role: UserRole.worker,
                         title: 'I am a worker',
                         urduTitle: 'میں کاریگر ہوں',
-                        description: 'Offer your tradesperson services to local households. 0% commission, direct calls.',
+                        description:
+                            'Offer your tradesperson services to local households. 0% commission, direct calls.',
                         icon: Icons.engineering_rounded,
                       ),
                       const Spacer(),
@@ -76,11 +79,14 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
                       CustomButton(
                         text: 'Continue',
                         onPressed: () {
-                          final appState = Provider.of<AppState>(context, listen: false);
+                          final appState = Provider.of<AppState>(
+                            context,
+                            listen: false,
+                          );
                           appState.setUserRole(_selectedRole);
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => const PhoneAuthScreen(),
+                              builder: (_) => const EmailAuthScreen(),
                             ),
                           );
                         },
@@ -127,14 +133,14 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
                     color: AppColors.primary.withAlpha(35),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
-                  )
+                  ),
                 ]
               : [
                   const BoxShadow(
                     color: AppColors.shadow,
                     blurRadius: 4,
                     offset: Offset(0, 2),
-                  )
+                  ),
                 ],
         ),
         child: Row(
@@ -178,14 +184,22 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
                         height: 22,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: isSelected ? AppColors.primary : Colors.transparent,
+                          color: isSelected
+                              ? AppColors.primary
+                              : Colors.transparent,
                           border: Border.all(
-                            color: isSelected ? AppColors.primary : AppColors.secondaryText,
+                            color: isSelected
+                                ? AppColors.primary
+                                : AppColors.secondaryText,
                             width: 2,
                           ),
                         ),
                         child: isSelected
-                            ? const Icon(Icons.check, size: 14, color: AppColors.white)
+                            ? const Icon(
+                                Icons.check,
+                                size: 14,
+                                color: AppColors.white,
+                              )
                             : null,
                       ),
                     ],

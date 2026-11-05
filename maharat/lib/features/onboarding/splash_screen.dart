@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
-import 'language_selection_screen.dart';
+import '../../routes/session_router.dart';
+import '../../state/app_state.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -14,6 +16,7 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
+  bool _hasFailed = false;
 
   @override
   void initState() {
@@ -35,22 +38,33 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    // Auto navigate after 2.5 seconds
-    Future.delayed(const Duration(milliseconds: 2500), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                const LanguageSelectionScreen(),
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-                  return FadeTransition(opacity: animation, child: child);
-                },
-            transitionDuration: const Duration(milliseconds: 500),
-          ),
-        );
-      }
-    });
+    _start();
+  }
+
+  /// Restores the session while the splash plays, then routes the user.
+  Future<void> _start() async {
+    final appState = Provider.of<AppState>(context, listen: false);
+    if (_hasFailed) setState(() => _hasFailed = false);
+    try {
+      await Future.wait([
+        Future<void>.delayed(const Duration(milliseconds: 2500)),
+        appState.bootstrap(),
+      ]);
+    } catch (_) {
+      if (mounted) setState(() => _hasFailed = true);
+      return;
+    }
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            destinationFor(appState),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 500),
+      ),
+    );
   }
 
   @override
@@ -147,16 +161,25 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ),
                   const SizedBox(height: 32),
-                  const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppColors.primary,
+                  if (_hasFailed)
+                    TextButton(
+                      onPressed: _start,
+                      child: const Text(
+                        'Could not connect. Tap to retry.',
+                        style: TextStyle(color: AppColors.white),
+                      ),
+                    )
+                  else
+                    const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          AppColors.primary,
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ),
