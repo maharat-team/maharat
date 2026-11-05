@@ -10,14 +10,24 @@ class Env {
   );
 
   static void assertConfigured() {
-    if (supabaseUrl.isEmpty || supabasePublishableKey.isEmpty) {
-      throw StateError(
-        'Supabase is not configured. Copy env.example.json to env.json and '
-        'run with --dart-define-from-file=env.json',
-      );
+    final problem = findProblem(supabaseUrl, supabasePublishableKey);
+    if (problem != null) throw StateError(problem);
+  }
+
+  /// Returns why this configuration cannot work, or null if it looks valid.
+  static String? findProblem(String url, String key) {
+    if (url.isEmpty || key.isEmpty) {
+      return 'Supabase is not configured. Copy env.example.json to env.json, '
+          'fill in your values, and run with '
+          '--dart-define-from-file=env.json';
     }
-    if (supabasePublishableKey.startsWith('sb_secret_')) {
-      throw StateError('A secret key must never be used in the app.');
+    if (url.contains('your-project-ref') || key.contains('your_key_here')) {
+      return 'env.json still has placeholder values. Replace them with your '
+          'project URL and publishable key.';
     }
+    if (key.startsWith('sb_secret_')) {
+      return 'A secret key must never be used in the app.';
+    }
+    return null;
   }
 }

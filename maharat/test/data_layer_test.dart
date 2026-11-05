@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
+import 'package:maharat/core/config/env.dart';
 import 'package:maharat/core/utils/date_utils.dart';
 import 'package:maharat/core/utils/image_compressor.dart';
 import 'package:maharat/core/utils/phone_utils.dart';
@@ -156,6 +157,34 @@ void main() {
             .isComplete,
         isTrue,
       );
+    });
+  });
+
+  group('client configuration', () {
+    const url = 'https://abc.supabase.co';
+    const key = 'sb_publishable_abc';
+
+    test('accepts real values', () {
+      expect(Env.findProblem(url, key), isNull);
+    });
+
+    test('rejects missing values', () {
+      expect(Env.findProblem('', key), contains('not configured'));
+      expect(Env.findProblem(url, ''), contains('not configured'));
+    });
+
+    test('rejects the values from env.example.json', () {
+      expect(
+        Env.findProblem(
+          'https://your-project-ref.supabase.co',
+          'sb_publishable_your_key_here',
+        ),
+        contains('placeholder'),
+      );
+    });
+
+    test('rejects a secret key', () {
+      expect(Env.findProblem(url, 'sb_secret_abc'), contains('secret'));
     });
   });
 

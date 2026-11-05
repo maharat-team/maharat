@@ -50,7 +50,8 @@ class _SplashScreenState extends State<SplashScreen>
         Future<void>.delayed(const Duration(milliseconds: 2500)),
         appState.bootstrap(),
       ]);
-    } catch (_) {
+    } catch (error) {
+      debugPrint('[startup] ${error.runtimeType}: $error');
       if (mounted) setState(() => _hasFailed = true);
       return;
     }

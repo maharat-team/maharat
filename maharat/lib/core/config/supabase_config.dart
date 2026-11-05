@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'env.dart';
 
@@ -5,6 +6,9 @@ import 'env.dart';
 class SupabaseConfig {
   static Future<void> initialize() async {
     Env.assertConfigured();
+    if (kDebugMode) {
+      debugPrint('[config] Supabase host: ${Uri.parse(Env.supabaseUrl).host}');
+    }
     await Supabase.initialize(
       url: Env.supabaseUrl,
       publishableKey: Env.supabasePublishableKey,

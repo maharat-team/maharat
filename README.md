@@ -70,7 +70,7 @@ flutter devices
 
 From the project root:
 
-Copy `maharat/env.example.json` to `maharat/env.json` and fill in your project URL and publishable key. Never put the secret key in this file.
+Copy `maharat/env.example.json` to `maharat/env.json`, then replace both placeholder values with your project URL and publishable key. The app stops at startup if they are left unchanged. Never put the secret key in this file.
 
 ```sh
 cd maharat
