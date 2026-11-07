@@ -5,7 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// Turns backend failures into text that is safe and useful to show a user.
 String friendlyError(Object error) {
   // Users get the friendly text; developers need the real cause in the logs.
-  if (kDebugMode) debugPrint('[error] ${error.runtimeType}: $error');
+  if (!kReleaseMode) debugPrint('[error] ${error.runtimeType}: $error');
 
   const fallback = 'Something went wrong. Please try again.';
   const offline = 'No internet connection. Please check it and try again.';

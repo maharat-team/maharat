@@ -6,7 +6,7 @@ import 'env.dart';
 class SupabaseConfig {
   static Future<void> initialize() async {
     Env.assertConfigured();
-    if (kDebugMode) {
+    if (!kReleaseMode) {
       debugPrint('[config] Supabase host: ${Uri.parse(Env.supabaseUrl).host}');
     }
     await Supabase.initialize(
