@@ -56,7 +56,25 @@ The Resend key stays in the Supabase dashboard. Do not add it to this repository
    - **Email OTP Length**: `6`.
 3. Authentication > **Rate Limits**: the default email limit is low. Raise it to suit expected sign-ups.
 
-## 5. Approving workers
+## 5. Automatic face verification (workers and contractors)
+
+New workers and shop owners upload their CNIC front, back and a live selfie. The
+`verify-identity` Edge Function compares the CNIC photo with the selfie using AWS
+Rekognition. A similarity of **80% or more** approves the account at once; anything
+lower rejects it with a reason, and the user can retake the photos (up to 5
+attempts a day).
+
+1. Deploy the function: `npx supabase functions deploy verify-identity`
+   (or the Edge Functions page in the dashboard).
+2. In AWS IAM, create a user with the `AmazonRekognitionReadOnlyAccess` policy
+   and an access key.
+3. Supabase > **Edge Functions > Secrets**: add `AWS_ACCESS_KEY_ID`,
+   `AWS_SECRET_ACCESS_KEY` and `AWS_REGION` (e.g. `eu-west-1`).
+
+Until the secrets exist, applications stay **pending** and can be approved by hand
+(next section).
+
+## 6. Approving by hand
 
 There is no admin panel yet. New workers stay hidden until approved. Open their photos under Storage > `cnic-documents` > their user id, then run this in the SQL Editor:
 
@@ -78,9 +96,16 @@ set status = 'rejected', rejection_reason = 'The CNIC photo is blurry.'
 where worker_id = '<worker-id>';
 ```
 
+## Testing the database
+
+`supabase/tests` runs every migration on PGlite (real Postgres in WASM) and checks
+the access rules as real users: `cd supabase/tests && npm install && npm test`.
+
 ## Security model
 
 - The app ships only the project URL and publishable key. `SUPABASE_SECRET_KEY` bypasses RLS and is never used by the app.
 - All tables have RLS. `anon` has no access; sign-in is required.
 - Column grants stop users writing ratings, job counts or verification status.
-- `cnic-documents` is upload-only for clients. Only the dashboard can view or delete those files.
+- `cnic-documents` is upload-only for clients. Only the dashboard and the `verify-identity` function (service role) can read those files.
+- A job's exact map pin (`job_locations`) is visible only to the customer, workers who responded, the contractor it was sent to, and workers they assigned. Everyone else sees a point rounded to about 1 km.
+- Contractor orders are private to that contractor; the customer's phone is shared only with them and their assigned workers.

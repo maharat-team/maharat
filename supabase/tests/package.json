@@ -1,0 +1,12 @@
+{
+  "name": "maharat-db-tests",
+  "private": true,
+  "type": "module",
+  "description": "Runs every migration on PGlite (real Postgres in WASM) and checks access rules as real users.",
+  "scripts": {
+    "test": "node run.mjs ../migrations flows.mjs"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "0.5.16"
+  }
+}
