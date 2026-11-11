@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/l10n/l10n.dart';
 import '../../core/theme/app_colors.dart';
 import 'home/customer_home_tab.dart';
 import 'find/find_workers_tab.dart';
@@ -56,26 +57,26 @@ class _CustomerMainScreenState extends State<CustomerMainScreen> {
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
           onTap: _onTabTapped,
-          items: const [
+          items: [
             BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),
-              activeIcon: Icon(Icons.home_rounded),
-              label: 'Home',
+              icon: const Icon(Icons.home_outlined),
+              activeIcon: const Icon(Icons.home_rounded),
+              label: context.tr('Home', 'ہوم'),
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.search_outlined),
-              activeIcon: Icon(Icons.search_rounded),
-              label: 'Find',
+              icon: const Icon(Icons.search_outlined),
+              activeIcon: const Icon(Icons.search_rounded),
+              label: context.tr('Find', 'تلاش'),
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.assignment_outlined),
-              activeIcon: Icon(Icons.assignment_rounded),
-              label: 'Requests',
+              icon: const Icon(Icons.assignment_outlined),
+              activeIcon: const Icon(Icons.assignment_rounded),
+              label: context.tr('Requests', 'درخواستیں'),
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline_rounded),
-              activeIcon: Icon(Icons.person_rounded),
-              label: 'Profile',
+              icon: const Icon(Icons.person_outline_rounded),
+              activeIcon: const Icon(Icons.person_rounded),
+              label: context.tr('Profile', 'پروفائل'),
             ),
           ],
         ),

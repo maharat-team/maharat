@@ -1,14 +1,19 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:maharat/models/contractor_model.dart';
 import 'package:maharat/models/job_request_model.dart';
 import 'package:maharat/models/review_model.dart';
 import 'package:maharat/models/user_profile_model.dart';
+import 'package:maharat/models/verification_info.dart';
 import 'package:maharat/models/worker_model.dart';
 import 'package:maharat/services/auth_service.dart';
+import 'package:maharat/services/contractor_service.dart';
 import 'package:maharat/services/job_service.dart';
 import 'package:maharat/services/profile_service.dart';
 import 'package:maharat/services/review_service.dart';
 import 'package:maharat/services/storage_service.dart';
+import 'package:maharat/services/verification_service.dart';
 import 'package:maharat/services/worker_service.dart';
 import 'package:maharat/state/app_state.dart';
 
@@ -97,6 +102,14 @@ class FakeAuthService implements AuthService {
     currentUserId = null;
     controller.add(null);
   }
+
+  bool deleted = false;
+
+  @override
+  Future<void> deleteAccount() async {
+    deleted = true;
+    await signOut();
+  }
 }
 
 class FakeProfileService implements ProfileService {
@@ -136,7 +149,24 @@ class FakeWorkerService implements WorkerService {
   Future<WorkerModel?> fetchOwn(String userId) async => own;
 
   @override
-  Future<String?> fetchRejectionReason(String userId) async => 'Photo blurry';
+  Future<VerificationInfo?> fetchVerification(String userId) async {
+    final status = own?.verificationStatus;
+    if (status == null) return null;
+    return VerificationInfo(
+      status: status,
+      score: status == VerificationStatus.approved ? 92 : 41,
+      code: status == VerificationStatus.rejected ? 'face_mismatch' : null,
+      reason: status == VerificationStatus.rejected ? 'Photo blurry' : null,
+    );
+  }
+
+  final profileUpdates = <Map<String, dynamic>>[];
+
+  @override
+  Future<void> updateProfile(String userId, Map<String, dynamic> fields) async {
+    if (failWrites) throw Exception('offline');
+    profileUpdates.add(fields);
+  }
 
   @override
   Future<void> submitApplication(
@@ -174,7 +204,7 @@ class FakeJobService implements JobService {
   List<JobRequestModel> nearby = [testJob(id: 'job-3')];
   bool failCreate = false;
   bool failFetch = false;
-  final completed = <String, String>{};
+  final completed = <String, String?>{};
   bool unsubscribed = false;
 
   @override
@@ -190,6 +220,19 @@ class FakeJobService implements JobService {
     required List<String> serviceAreas,
   }) async => nearby;
 
+  List<JobRequestModel> contractorOrders = const [];
+  List<JobRequestModel> assigned = const [];
+  String? lastContractorId;
+
+  @override
+  Future<List<JobRequestModel>> fetchContractorOrders(
+    String contractorId,
+  ) async => contractorOrders;
+
+  @override
+  Future<List<JobRequestModel>> fetchAssignedJobs(String workerId) async =>
+      assigned;
+
   @override
   Future<JobRequestModel> create({
     required String trade,
@@ -197,8 +240,12 @@ class FakeJobService implements JobService {
     required String location,
     required String urgency,
     required List<String> photoPaths,
+    String? contractorId,
+    LatLng? point,
+    String addressDetails = '',
   }) async {
     if (failCreate) throw Exception('insert failed');
+    lastContractorId = contractorId;
     return testJob(id: 'job-new', interested: const []);
   }
 
@@ -206,7 +253,7 @@ class FakeJobService implements JobService {
   Future<void> close(String jobId) async {}
 
   @override
-  Future<void> complete(String jobId, String workerId) async {
+  Future<void> complete(String jobId, String? workerId) async {
     completed[jobId] = workerId;
   }
 
@@ -214,7 +261,7 @@ class FakeJobService implements JobService {
   Future<void> expressInterest(String jobId, String workerId) async {}
 
   @override
-  Object subscribeToInterests(VoidCallback onChange) => Object();
+  Object subscribeToChanges(VoidCallback onChange) => Object();
 
   @override
   Future<void> unsubscribe(Object subscription) async {
@@ -224,17 +271,121 @@ class FakeJobService implements JobService {
 
 class FakeReviewService implements ReviewService {
   String? reviewedWorkerId;
+  String? reviewedContractorId;
 
   @override
   Future<void> create({
     required String jobId,
-    required String workerId,
+    String? workerId,
+    String? contractorId,
     required double rating,
     required String comment,
     required List<String> tags,
   }) async {
     reviewedWorkerId = workerId;
+    reviewedContractorId = contractorId;
   }
+}
+
+class FakeContractorService implements ContractorService {
+  List<ContractorModel> directory = const [];
+  ContractorModel? own;
+  List<TeamMembership> team = const [];
+  List<TeamMembership> memberships = const [];
+  final invitedPhones = <String>[];
+  final orderReplies = <String, bool>{};
+  final assignments = <String, List<String>>{};
+
+  @override
+  Future<List<ContractorModel>> fetchDirectory() async => directory;
+
+  @override
+  Future<ContractorModel?> fetchOwn(String userId) async => own;
+
+  @override
+  Future<VerificationInfo?> fetchVerification(String userId) async =>
+      own == null ? null : VerificationInfo(status: own!.verificationStatus);
+
+  @override
+  Future<void> submitApplication(
+    ContractorApplication application, {
+    required String? shopPhotoPath,
+    required String frontPath,
+    required String backPath,
+    required String selfiePath,
+  }) async {
+    own = testContractor(status: VerificationStatus.pending);
+  }
+
+  @override
+  Future<void> update(String userId, Map<String, dynamic> fields) async {}
+
+  @override
+  Future<List<TeamMembership>> fetchTeam(String contractorId) async => team;
+
+  @override
+  Future<List<TeamMembership>> fetchMemberships(String workerId) async =>
+      memberships;
+
+  @override
+  Future<String> inviteMember(String phone) async {
+    invitedPhones.add(phone);
+    return 'Mohammad Tariq';
+  }
+
+  @override
+  Future<void> respondToInvite(String contractorId, bool accept) async {}
+
+  @override
+  Future<void> removeMembership(String contractorId, String workerId) async {}
+
+  @override
+  Future<void> respondToOrder(String jobId, bool accept) async {
+    orderReplies[jobId] = accept;
+  }
+
+  @override
+  Future<void> assignTeam(String jobId, List<String> workerIds) async {
+    assignments[jobId] = workerIds;
+  }
+}
+
+class FakeVerificationService implements VerificationService {
+  FaceCheckResult result = const FaceCheckResult(
+    status: VerificationStatus.approved,
+    score: 91.4,
+  );
+  int checks = 0;
+
+  @override
+  Future<FaceCheckResult> check({required bool contractor}) async {
+    checks++;
+    return result;
+  }
+}
+
+ContractorModel testContractor({
+  String id = testUserId,
+  VerificationStatus status = VerificationStatus.approved,
+}) {
+  return ContractorModel(
+    id: id,
+    businessName: 'Kashif Electric Works',
+    ownerName: 'Ahmed Khan',
+    phone: '+923003333333',
+    trades: const ['Electrician', 'Plumber'],
+    bio: 'Electric and plumbing work since 2010.',
+    neighbourhood: 'Model Town A',
+    serviceAreas: const ['Model Town A', 'Satellite Town'],
+    shopAddress: 'Shop 4, Circular Road',
+    location: null,
+    shopPhotoUrl: null,
+    isAcceptingOrders: true,
+    verificationStatus: status,
+    rating: 4.5,
+    reviewCount: 2,
+    completedJobsCount: 7,
+  );
 }
 
 class FakeStorageService implements StorageService {
@@ -288,6 +439,8 @@ class FakeBackend {
   final jobs = FakeJobService();
   final reviews = FakeReviewService();
   final storage = FakeStorageService();
+  final contractors = FakeContractorService();
+  final verification = FakeVerificationService();
 
   AppState createState() => AppState(
     auth: auth,
@@ -296,6 +449,8 @@ class FakeBackend {
     jobs: jobs,
     reviews: reviews,
     storage: storage,
+    contractors: contractors,
+    verification: verification,
   );
 }
 

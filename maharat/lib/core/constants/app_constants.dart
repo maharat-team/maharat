@@ -6,6 +6,7 @@ class TradeCategoryInfo {
   final String nameUrdu;
   final IconData icon;
   final String description;
+  final String descriptionUrdu;
   final Color color;
 
   const TradeCategoryInfo({
@@ -14,6 +15,7 @@ class TradeCategoryInfo {
     required this.nameUrdu,
     required this.icon,
     required this.description,
+    required this.descriptionUrdu,
     required this.color,
   });
 }
@@ -47,6 +49,7 @@ class AppConstants {
       nameUrdu: 'الیکٹریشن',
       icon: Icons.electrical_services_rounded,
       description: 'Wiring, switches, UPS, fan & lighting repairs',
+      descriptionUrdu: 'وائرنگ، سوئچ، یو پی ایس، پنکھے اور لائٹ کی مرمت',
       color: Color(0xFFEAB308),
     ),
     TradeCategoryInfo(
@@ -55,6 +58,7 @@ class AppConstants {
       nameUrdu: 'پلمبر',
       icon: Icons.plumbing_rounded,
       description: 'Pipe leaks, taps, bathroom fitting, water motors',
+      descriptionUrdu: 'پائپ لیکیج، نلکے، باتھ روم فٹنگ، پانی کی موٹر',
       color: Color(0xFF0284C7),
     ),
     TradeCategoryInfo(
@@ -63,6 +67,7 @@ class AppConstants {
       nameUrdu: 'راج مستری',
       icon: Icons.foundation_rounded,
       description: 'Brickwork, plaster, tiles, concrete work',
+      descriptionUrdu: 'اینٹوں کا کام، پلستر، ٹائلیں، کنکریٹ',
       color: Color(0xFFD97706),
     ),
     TradeCategoryInfo(
@@ -71,6 +76,7 @@ class AppConstants {
       nameUrdu: 'کارپینٹر',
       icon: Icons.handyman_rounded,
       description: 'Doors, windows, furniture repair & custom woodwork',
+      descriptionUrdu: 'دروازے، کھڑکیاں، فرنیچر کی مرمت اور لکڑی کا کام',
       color: Color(0xFF854D0E),
     ),
     TradeCategoryInfo(
@@ -79,6 +85,7 @@ class AppConstants {
       nameUrdu: 'پینٹر',
       icon: Icons.format_paint_rounded,
       description: 'House painting, distemper, wall putty, weather sheet',
+      descriptionUrdu: 'گھر کا رنگ، ڈسٹمپر، دیوار پٹی، ویدر شیٹ',
       color: Color(0xFF9333EA),
     ),
     TradeCategoryInfo(
@@ -87,6 +94,7 @@ class AppConstants {
       nameUrdu: 'اے سی ٹیکنیشن',
       icon: Icons.ac_unit_rounded,
       description: 'AC installation, servicing, gas refilling & repair',
+      descriptionUrdu: 'اے سی کی تنصیب، سروس، گیس بھرنا اور مرمت',
       color: Color(0xFF06B6D4),
     ),
   ];

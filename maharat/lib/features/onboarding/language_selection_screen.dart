@@ -1,25 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/l10n/l10n.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/custom_button.dart';
 import '../../state/app_state.dart';
 import 'user_type_selection_screen.dart';
 
-class LanguageSelectionScreen extends StatefulWidget {
+/// First screen for new users, and the language setting later on.
+///
+/// Tapping a language applies it at once, so the user sees the whole app in
+/// that language (including right-to-left layout for Urdu) before continuing.
+class LanguageSelectionScreen extends StatelessWidget {
   const LanguageSelectionScreen({super.key});
 
   @override
-  State<LanguageSelectionScreen> createState() =>
-      _LanguageSelectionScreenState();
-}
-
-class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
-  String _selectedLang = 'English';
-
-  @override
   Widget build(BuildContext context) {
+    final appState = Provider.of<AppState>(context);
+    final selected = appState.currentUser.language;
+    final canGoBack = Navigator.of(context).canPop();
+
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: canGoBack ? AppBar() : null,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -50,10 +52,10 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
                         ),
                       ),
                       const SizedBox(height: 24),
-                      const Center(
+                      Center(
                         child: Text(
-                          'Select Language / زبان منتخب کریں',
-                          style: TextStyle(
+                          context.tr('Select Language', 'زبان منتخب کریں'),
+                          style: const TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
                             color: AppColors.primaryText,
@@ -62,39 +64,42 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const Center(
+                      Center(
                         child: Text(
-                          'Choose your preferred language to continue',
-                          style: TextStyle(
+                          context.tr(
+                            'The whole app will use this language. You can change it later in Settings.',
+                            'پوری ایپ اسی زبان میں ہوگی۔ آپ اسے بعد میں سیٹنگز سے بدل سکتے ہیں۔',
+                          ),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
                             fontSize: 14,
                             color: AppColors.secondaryText,
                           ),
                         ),
                       ),
                       const SizedBox(height: 28),
-                      _buildLanguageCard(
+                      _LanguageCard(
                         title: 'اردو',
-                        subtitle: 'Urdu',
-                        code: 'Urdu',
-                        isUrduFont: true,
+                        subtitle: context.tr('Urdu', 'اردو میں استعمال کریں'),
+                        isSelected: selected == AppLanguage.urdu,
+                        onTap: () => appState.setLanguage(AppLanguage.urdu),
                       ),
                       const SizedBox(height: 14),
-                      _buildLanguageCard(
+                      _LanguageCard(
                         title: 'English',
-                        subtitle: 'Default language',
-                        code: 'English',
+                        subtitle: context.tr(
+                          'Default language',
+                          'انگریزی میں استعمال کریں',
+                        ),
+                        isSelected: selected == AppLanguage.english,
+                        onTap: () => appState.setLanguage(AppLanguage.english),
                       ),
                       const Spacer(),
                       const SizedBox(height: 24),
                       CustomButton(
-                        text: 'Continue / آگے بڑھیں',
+                        text: context.tr('Continue', 'آگے بڑھیں'),
                         onPressed: () {
-                          final appState = Provider.of<AppState>(
-                            context,
-                            listen: false,
-                          );
-                          appState.setLanguage(_selectedLang);
-                          if (appState.isAuthenticated) {
+                          if (canGoBack) {
                             Navigator.of(context).pop();
                             return;
                           }
@@ -116,20 +121,25 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
       ),
     );
   }
+}
 
-  Widget _buildLanguageCard({
-    required String title,
-    required String subtitle,
-    required String code,
-    bool isUrduFont = false,
-  }) {
-    final isSelected = _selectedLang == code;
+class _LanguageCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _LanguageCard({
+    required this.title,
+    required this.subtitle,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedLang = code;
-        });
-      },
+      onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
@@ -148,8 +158,8 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
                     offset: const Offset(0, 4),
                   ),
                 ]
-              : [
-                  const BoxShadow(
+              : const [
+                  BoxShadow(
                     color: AppColors.shadow,
                     blurRadius: 4,
                     offset: Offset(0, 2),
@@ -164,11 +174,10 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
                 children: [
                   Text(
                     title,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: AppColors.primaryText,
-                      fontFamily: isUrduFont ? 'NotoSansArabic' : null,
                     ),
                   ),
                   const SizedBox(height: 2),

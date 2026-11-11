@@ -6,7 +6,10 @@ class ReviewModel {
   final double rating;
   final String comment;
   final List<String> tags;
+
+  /// A fixed label, used when [createdAt] is unknown (tests, fixtures).
   final String date;
+  final DateTime? createdAt;
 
   ReviewModel({
     required this.id,
@@ -14,8 +17,15 @@ class ReviewModel {
     required this.rating,
     required this.comment,
     required this.tags,
-    required this.date,
+    this.date = '',
+    this.createdAt,
   });
+
+  /// Worked out when shown, so it follows the current language.
+  String get dateLabel {
+    final created = createdAt;
+    return created == null ? date : relativeDate(created);
+  }
 
   factory ReviewModel.fromJson(Map<String, dynamic> json) {
     return ReviewModel(
@@ -24,9 +34,7 @@ class ReviewModel {
       rating: (json['rating'] as num).toDouble(),
       comment: json['comment'] as String? ?? '',
       tags: List<String>.from(json['tags'] as List? ?? const []),
-      date: relativeDate(
-        DateTime.parse(json['created_at'] as String).toLocal(),
-      ),
+      createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
     );
   }
 }

@@ -1,3 +1,5 @@
+import 'package:latlong2/latlong.dart';
+import '../core/utils/geo.dart';
 import 'review_model.dart';
 
 enum VerificationStatus { pending, approved, rejected }
@@ -28,6 +30,9 @@ class WorkerModel {
   final List<ReviewModel> reviews;
   final int completedJobsCount;
 
+  /// Approximate (about 1 km) base location, for distances.
+  final LatLng? baseLocation;
+
   WorkerModel({
     required this.id,
     required this.name,
@@ -45,6 +50,7 @@ class WorkerModel {
     required this.workPhotos,
     required this.reviews,
     required this.completedJobsCount,
+    this.baseLocation,
   });
 
   bool get isCnicVerified => verificationStatus == VerificationStatus.approved;
@@ -109,31 +115,40 @@ class WorkerModel {
       }).toList(),
       reviews: reviews.map(ReviewModel.fromJson).toList(),
       completedJobsCount: json['completed_jobs_count'] as int,
+      baseLocation: latLngOrNull(json['base_lat'], json['base_lng']),
     );
   }
 
   WorkerModel copyWith({
     String? name,
+    String? phone,
+    String? bio,
+    int? experienceYears,
+    int? visitFee,
+    List<String>? serviceAreas,
     bool? isAvailableToday,
     List<WorkPhoto>? workPhotos,
+    LatLng? baseLocation,
   }) {
+    final areas = serviceAreas ?? this.serviceAreas;
     return WorkerModel(
       id: id,
       name: name ?? this.name,
       trade: trade,
-      phone: phone,
+      phone: phone ?? this.phone,
       rating: rating,
       reviewCount: reviewCount,
-      experienceYears: experienceYears,
-      visitFee: visitFee,
-      neighbourhood: neighbourhood,
-      serviceAreas: serviceAreas,
-      bio: bio,
+      experienceYears: experienceYears ?? this.experienceYears,
+      visitFee: visitFee ?? this.visitFee,
+      neighbourhood: areas.isEmpty ? neighbourhood : areas.first,
+      serviceAreas: areas,
+      bio: bio ?? this.bio,
       verificationStatus: verificationStatus,
       isAvailableToday: isAvailableToday ?? this.isAvailableToday,
       workPhotos: workPhotos ?? this.workPhotos,
       reviews: reviews,
       completedJobsCount: completedJobsCount,
+      baseLocation: baseLocation ?? this.baseLocation,
     );
   }
 }

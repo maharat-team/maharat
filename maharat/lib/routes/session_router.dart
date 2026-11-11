@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../features/contractor/contractor_main_screen.dart';
+import '../features/contractor/registration/contractor_reg_step1_screen.dart';
 import '../features/customer/customer_main_screen.dart';
 import '../features/onboarding/language_selection_screen.dart';
 import '../features/onboarding/profile_setup_screen.dart';
@@ -13,8 +15,16 @@ Widget destinationFor(AppState appState) {
 
   final user = appState.currentUser;
   if (!user.isComplete) return const ProfileSetupScreen();
-  if (user.userRole == UserRole.customer) return const CustomerMainScreen();
-  return user.isWorkerRegistered
-      ? const WorkerDashboardScreen()
-      : const WorkerRegStep1Screen();
+  switch (user.userRole) {
+    case UserRole.customer:
+      return const CustomerMainScreen();
+    case UserRole.worker:
+      return user.isWorkerRegistered
+          ? const WorkerDashboardScreen()
+          : const WorkerRegStep1Screen();
+    case UserRole.contractor:
+      return user.isContractorRegistered
+          ? const ContractorMainScreen()
+          : const ContractorRegStep1Screen();
+  }
 }

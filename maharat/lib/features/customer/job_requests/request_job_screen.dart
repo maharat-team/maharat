@@ -1,19 +1,26 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/l10n/l10n.dart';
+import '../../../core/l10n/labels.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/error_messages.dart';
 import '../../../core/utils/image_picker_helper.dart';
 import '../../../core/widgets/custom_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
+import '../../../core/widgets/location_widgets.dart';
+import '../../../models/contractor_model.dart';
 import '../../../state/app_state.dart';
 import 'request_sent_screen.dart';
 
+/// Posts a job to all matching workers, or as an order to one [contractor].
 class RequestJobScreen extends StatefulWidget {
   final String? initialCategory;
+  final ContractorModel? contractor;
 
-  const RequestJobScreen({super.key, this.initialCategory});
+  const RequestJobScreen({super.key, this.initialCategory, this.contractor});
 
   @override
   State<RequestJobScreen> createState() => _RequestJobScreenState();
@@ -24,23 +31,36 @@ class _RequestJobScreenState extends State<RequestJobScreen> {
   late String _selectedCategory;
   final TextEditingController _descriptionController = TextEditingController();
   late String _selectedLocation;
-  String _selectedUrgency = 'Today'; // Today, Tomorrow, Any Day
+  String _selectedUrgency = 'Today';
+  LatLng? _point;
+  String _addressDetails = '';
 
   static const _maxPhotos = 6;
 
   final List<Uint8List> _photos = [];
   bool _isSubmitting = false;
 
+  List<String> get _trades {
+    final shop = widget.contractor;
+    if (shop == null) return AppConstants.categories.map((c) => c.nameEn).toList();
+    return shop.trades;
+  }
+
   @override
   void initState() {
     super.initState();
-    _selectedCategory =
-        widget.initialCategory ?? AppConstants.categories.first.nameEn;
-    final appState = Provider.of<AppState>(context, listen: false);
-    final home = appState.currentUser.neighbourhood;
-    _selectedLocation = AppConstants.bahawalpurNeighbourhoods.contains(home)
-        ? home
+    final trades = _trades;
+    final wanted = widget.initialCategory;
+    _selectedCategory = wanted != null && trades.contains(wanted)
+        ? wanted
+        : trades.first;
+    final user = Provider.of<AppState>(context, listen: false).currentUser;
+    _selectedLocation =
+        AppConstants.bahawalpurNeighbourhoods.contains(user.neighbourhood)
+        ? user.neighbourhood
         : AppConstants.bahawalpurNeighbourhoods.first;
+    _point = user.location;
+    _addressDetails = user.addressDetails;
   }
 
   @override
@@ -52,7 +72,14 @@ class _RequestJobScreenState extends State<RequestJobScreen> {
   Future<void> _addPhoto() async {
     if (_photos.length >= _maxPhotos) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You can attach up to 6 photos.')),
+        SnackBar(
+          content: Text(
+            context.tr(
+              'You can attach up to 6 photos.',
+              'آپ زیادہ سے زیادہ 6 تصاویر لگا سکتے ہیں۔',
+            ),
+          ),
+        ),
       );
       return;
     }
@@ -72,6 +99,9 @@ class _RequestJobScreenState extends State<RequestJobScreen> {
         location: _selectedLocation,
         urgency: _selectedUrgency,
         photos: _photos,
+        contractorId: widget.contractor?.id,
+        point: _point,
+        addressDetails: _addressDetails,
       );
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
@@ -86,11 +116,30 @@ class _RequestJobScreenState extends State<RequestJobScreen> {
     }
   }
 
+  Widget _label(String text) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(
+      text,
+      style: const TextStyle(
+        fontSize: 15,
+        fontWeight: FontWeight.bold,
+        color: AppColors.primaryText,
+      ),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
+    final shop = widget.contractor;
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Request a Job')),
+      appBar: AppBar(
+        title: Text(
+          shop == null
+              ? context.tr('Request a Job', 'کام کی درخواست')
+              : context.tr('Order from shop', 'دکان کو آرڈر'),
+        ),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
@@ -98,29 +147,57 @@ class _RequestJobScreenState extends State<RequestJobScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. Category Selection
-              const Text(
-                '1. Select Required Tradesperson',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primaryText,
+              if (shop != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.lightMint,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.storefront_rounded,
+                        color: AppColors.darkGreen,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          context.tr(
+                            'This order goes only to ${shop.businessName}. They will accept it and send a worker from their team.',
+                            'یہ آرڈر صرف ${shop.businessName} کو جائے گا۔ وہ قبول کر کے اپنی ٹیم سے کاریگر بھیجیں گے۔',
+                          ),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.darkGreen,
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 10),
+                const SizedBox(height: 20),
+              ],
+              _label(context.tr('1. What work is needed?', '1. کون سا کام چاہیے؟')),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: AppConstants.categories.map((c) {
-                  final isSelected = _selectedCategory == c.nameEn;
+                children: _trades.map((trade) {
+                  final info = AppConstants.categories.firstWhere(
+                    (c) => c.nameEn == trade,
+                    orElse: () => AppConstants.categories.first,
+                  );
+                  final isSelected = _selectedCategory == trade;
                   return ChoiceChip(
                     avatar: Icon(
-                      c.icon,
+                      info.icon,
                       size: 18,
-                      color: isSelected ? AppColors.white : c.color,
+                      color: isSelected ? AppColors.white : info.color,
                     ),
-                    label: Text(c.nameEn),
+                    label: Text(context.tradeName(trade)),
                     selected: isSelected,
+                    showCheckmark: false,
                     selectedColor: AppColors.primary,
                     backgroundColor: AppColors.white,
                     labelStyle: TextStyle(
@@ -140,45 +217,37 @@ class _RequestJobScreenState extends State<RequestJobScreen> {
                       ),
                     ),
                     onSelected: (val) {
-                      if (val) {
-                        setState(() {
-                          _selectedCategory = c.nameEn;
-                        });
-                      }
+                      if (val) setState(() => _selectedCategory = trade);
                     },
                   );
                 }).toList(),
               ),
-
               const SizedBox(height: 24),
-
-              // 2. Describe Problem
               CustomTextField(
-                label: '2. Describe the Problem',
-                hint:
-                    'e.g. Living room switchboard sparking, UPS battery not charging, or kitchen tap leak...',
+                label: context.tr('2. Describe the problem', '2. مسئلہ بیان کریں'),
+                hint: context.tr(
+                  'e.g. Switchboard sparking, UPS not charging, kitchen tap leaking...',
+                  'مثلاً سوئچ بورڈ سے چنگاری، یو پی ایس چارج نہیں ہو رہا، کچن کا نلکا لیک...',
+                ),
                 controller: _descriptionController,
                 maxLines: 4,
                 validator: (val) {
                   if (val == null || val.trim().isEmpty) {
-                    return 'Please enter a description of the work needed';
+                    return context.tr(
+                      'Please describe the work needed',
+                      'براہ کرم کام کی تفصیل لکھیں',
+                    );
                   }
                   return null;
                 },
               ),
-
               const SizedBox(height: 20),
-
-              // 3. Photo Attachments
-              const Text(
-                '3. Photo Attachments (Optional)',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primaryText,
+              _label(
+                context.tr(
+                  '3. Photos (optional)',
+                  '3. تصاویر (اختیاری)',
                 ),
               ),
-              const SizedBox(height: 6),
               Row(
                 children: [
                   GestureDetector(
@@ -194,18 +263,18 @@ class _RequestJobScreenState extends State<RequestJobScreen> {
                           width: 1.5,
                         ),
                       ),
-                      child: const Column(
+                      child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.add_a_photo_outlined,
                             color: AppColors.primary,
                             size: 24,
                           ),
-                          SizedBox(height: 4),
+                          const SizedBox(height: 4),
                           Text(
-                            'Add Photo',
-                            style: TextStyle(
+                            context.tr('Add Photo', 'تصویر لگائیں'),
+                            style: const TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
                               color: AppColors.primary,
@@ -227,7 +296,7 @@ class _RequestJobScreenState extends State<RequestJobScreen> {
                             children: [
                               Container(
                                 width: 80,
-                                margin: const EdgeInsets.only(right: 8),
+                                margin: const EdgeInsetsDirectional.only(end: 8),
                                 clipBehavior: Clip.antiAlias,
                                 decoration: BoxDecoration(
                                   color: AppColors.lightMint,
@@ -240,15 +309,12 @@ class _RequestJobScreenState extends State<RequestJobScreen> {
                                   height: 80,
                                 ),
                               ),
-                              Positioned(
+                              PositionedDirectional(
                                 top: 2,
-                                right: 10,
+                                end: 10,
                                 child: GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      _photos.removeAt(index);
-                                    });
-                                  },
+                                  onTap: () =>
+                                      setState(() => _photos.removeAt(index)),
                                   child: Container(
                                     padding: const EdgeInsets.all(2),
                                     decoration: const BoxDecoration(
@@ -271,19 +337,8 @@ class _RequestJobScreenState extends State<RequestJobScreen> {
                   ),
                 ],
               ),
-
               const SizedBox(height: 20),
-
-              // 4. Location Selection
-              const Text(
-                '4. Location in Bahawalpur',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primaryText,
-                ),
-              ),
-              const SizedBox(height: 6),
+              _label(context.tr('4. Area in Bahawalpur', '4. بہاولپور میں علاقہ')),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
@@ -302,41 +357,51 @@ class _RequestJobScreenState extends State<RequestJobScreen> {
                     items: AppConstants.bahawalpurNeighbourhoods.map((area) {
                       return DropdownMenuItem<String>(
                         value: area,
-                        child: Text(area),
+                        child: Text(context.areaName(area)),
                       );
                     }).toList(),
                     onChanged: (val) {
-                      if (val != null) {
-                        setState(() {
-                          _selectedLocation = val;
-                        });
-                      }
+                      if (val != null) setState(() => _selectedLocation = val);
                     },
                   ),
                 ),
               ),
-
-              const SizedBox(height: 20),
-
-              // 5. Urgency Options
-              const Text(
-                '5. When do you need the service?',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primaryText,
+              const SizedBox(height: 16),
+              LocationField(
+                label: context.tr(
+                  'Exact location on map',
+                  'نقشے پر درست مقام',
                 ),
+                value: _point,
+                addressDetails: _addressDetails,
+                onChanged: (picked) => setState(() {
+                  _point = picked.point;
+                  _addressDetails = picked.addressDetails;
+                }),
               ),
               const SizedBox(height: 6),
+              Text(
+                context.tr(
+                  'Only workers who respond (or the shop you order from) see the exact pin. Others see the area only.',
+                  'درست پن صرف جواب دینے والے کاریگر (یا جس دکان کو آرڈر دیا) دیکھ سکتے ہیں۔ باقی صرف علاقہ دیکھتے ہیں۔',
+                ),
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.secondaryText,
+                ),
+              ),
+              const SizedBox(height: 20),
+              _label(context.tr('5. When do you need it?', '5. کب چاہیے؟')),
               Row(
                 children: ['Today', 'Tomorrow', 'Any Day'].map((urgency) {
                   final isSelected = _selectedUrgency == urgency;
                   return Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsetsDirectional.only(end: 8),
                       child: ChoiceChip(
-                        label: Center(child: Text(urgency)),
+                        label: Center(child: Text(context.urgencyName(urgency))),
                         selected: isSelected,
+                        showCheckmark: false,
                         selectedColor: AppColors.primary,
                         backgroundColor: AppColors.white,
                         labelStyle: TextStyle(
@@ -357,22 +422,18 @@ class _RequestJobScreenState extends State<RequestJobScreen> {
                           ),
                         ),
                         onSelected: (val) {
-                          if (val) {
-                            setState(() {
-                              _selectedUrgency = urgency;
-                            });
-                          }
+                          if (val) setState(() => _selectedUrgency = urgency);
                         },
                       ),
                     ),
                   );
                 }).toList(),
               ),
-
               const SizedBox(height: 36),
-
               CustomButton(
-                text: 'Send Job Request to Workers',
+                text: shop == null
+                    ? context.tr('Send to Workers', 'کاریگروں کو بھیجیں')
+                    : context.tr('Send Order', 'آرڈر بھیجیں'),
                 icon: Icons.send_rounded,
                 isLoading: _isSubmitting,
                 onPressed: _submitJobRequest,

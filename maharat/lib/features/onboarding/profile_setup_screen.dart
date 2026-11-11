@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/l10n/l10n.dart';
+import '../../core/l10n/labels.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/error_messages.dart';
 import '../../core/utils/phone_utils.dart';
 import '../../core/widgets/custom_button.dart';
 import '../../core/widgets/custom_text_field.dart';
+import '../../core/widgets/location_widgets.dart';
 import '../../routes/session_router.dart';
 import '../../state/app_state.dart';
 
@@ -22,6 +26,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   late final TextEditingController _nameController;
   late final TextEditingController _phoneController;
   String? _neighbourhood;
+  LatLng? _location;
+  String _addressDetails = '';
   bool _isSaving = false;
 
   @override
@@ -34,6 +40,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         AppConstants.bahawalpurNeighbourhoods.contains(user.neighbourhood)
         ? user.neighbourhood
         : null;
+    _location = user.location;
+    _addressDetails = user.addressDetails;
   }
 
   @override
@@ -47,7 +55,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_neighbourhood == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select your neighbourhood')),
+        SnackBar(
+          content: Text(
+            context.tr(
+              'Please select your neighbourhood',
+              'براہ کرم اپنا علاقہ منتخب کریں',
+            ),
+          ),
+        ),
       );
       return;
     }
@@ -60,6 +75,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         phone: _phoneController.text,
         neighbourhood: _neighbourhood,
       );
+      final location = _location;
+      if (location != null) {
+        await appState.updateMyLocation(location, _addressDetails);
+      }
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => destinationFor(appState)),
@@ -86,35 +105,38 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Complete Your Profile',
-                  style: TextStyle(
+                Text(
+                  context.tr('Complete Your Profile', 'اپنی پروفائل مکمل کریں'),
+                  style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: AppColors.primaryText,
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Tradespeople and customers see your name on jobs and reviews.',
-                  style: TextStyle(
+                Text(
+                  context.tr(
+                    'Workers and customers see your name on jobs and reviews.',
+                    'کاریگر اور گاہک آپ کا نام کاموں اور ریویوز پر دیکھتے ہیں۔',
+                  ),
+                  style: const TextStyle(
                     fontSize: 14,
                     color: AppColors.secondaryText,
                   ),
                 ),
                 const SizedBox(height: 32),
                 CustomTextField(
-                  label: 'Full Name',
-                  hint: 'Your name',
+                  label: context.tr('Full Name', 'پورا نام'),
+                  hint: context.tr('Your name', 'آپ کا نام'),
                   controller: _nameController,
                   prefixIcon: Icons.person_outline_rounded,
                   validator: (val) => val == null || val.trim().isEmpty
-                      ? 'Please enter your name'
+                      ? context.tr('Please enter your name', 'براہ کرم اپنا نام درج کریں')
                       : null,
                 ),
                 const SizedBox(height: 20),
                 CustomTextField(
-                  label: 'Mobile Number',
+                  label: context.tr('Mobile Number', 'موبائل نمبر'),
                   hint: '0300 1234567',
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
@@ -122,9 +144,12 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   validator: PhoneUtils.validate,
                 ),
                 const SizedBox(height: 20),
-                const Text(
-                  'Neighbourhood in Bahawalpur',
-                  style: TextStyle(
+                Text(
+                  context.tr(
+                    'Neighbourhood in Bahawalpur',
+                    'بہاولپور میں آپ کا علاقہ',
+                  ),
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: AppColors.primaryText,
@@ -141,13 +166,13 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       value: _neighbourhood,
-                      hint: const Text('Select'),
+                      hint: Text(context.tr('Select', 'منتخب کریں')),
                       isExpanded: true,
                       items: AppConstants.bahawalpurNeighbourhoods
                           .map(
                             (area) => DropdownMenuItem<String>(
                               value: area,
-                              child: Text(area),
+                              child: Text(context.areaName(area)),
                             ),
                           )
                           .toList(),
@@ -155,9 +180,22 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 20),
+                LocationField(
+                  label: context.tr(
+                    'Home location on map (optional)',
+                    'نقشے پر گھر کا مقام (اختیاری)',
+                  ),
+                  value: _location,
+                  addressDetails: _addressDetails,
+                  onChanged: (picked) => setState(() {
+                    _location = picked.point;
+                    _addressDetails = picked.addressDetails;
+                  }),
+                ),
                 const SizedBox(height: 40),
                 CustomButton(
-                  text: 'Continue',
+                  text: context.tr('Continue', 'آگے بڑھیں'),
                   isLoading: _isSaving,
                   onPressed: _save,
                 ),

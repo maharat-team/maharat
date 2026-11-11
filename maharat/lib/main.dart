@@ -1,14 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'core/config/supabase_config.dart';
+import 'core/l10n/l10n.dart';
 import 'core/theme/app_theme.dart';
 import 'routes/app_routes.dart';
+import 'services/language_store.dart';
 import 'state/app_state.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await SupabaseConfig.initialize();
-  runApp(const MaharatApp());
+  final languageStore = LanguageStore();
+  final results = await Future.wait<Object?>([
+    SupabaseConfig.initialize(),
+    languageStore.load(),
+  ]);
+  final language = results[1] as String? ?? AppLanguage.english;
+  runApp(
+    MaharatApp(
+      appState: AppState(
+        languageStore: languageStore,
+        initialLanguage: language,
+      ),
+    ),
+  );
 }
 
 class MaharatApp extends StatefulWidget {
@@ -47,13 +62,29 @@ class _MaharatAppState extends State<MaharatApp> {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider.value(
       value: _appState,
-      child: MaterialApp(
-        navigatorKey: _navigatorKey,
-        title: 'Maharat - Local Service Provider',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        initialRoute: AppRoutes.splash,
-        routes: AppRoutes.routes,
+      // Changing the language swaps the locale (text, right-to-left layout)
+      // and the font without leaving the current screen.
+      child: Selector<AppState, String>(
+        selector: (_, state) => state.currentUser.language,
+        builder: (context, language, _) {
+          final urdu = language == AppLanguage.urdu;
+          AppLanguage.isUrdu = urdu;
+          return MaterialApp(
+            navigatorKey: _navigatorKey,
+            title: 'Maharat',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.forLanguage(urdu: urdu),
+            locale: AppLanguage.localeFor(language),
+            supportedLocales: const [Locale('en'), Locale('ur')],
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            initialRoute: AppRoutes.splash,
+            routes: AppRoutes.routes,
+          );
+        },
       ),
     );
   }

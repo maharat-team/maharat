@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/l10n/l10n.dart';
+import '../../../core/l10n/labels.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/error_messages.dart';
 import '../../../core/utils/image_picker_helper.dart';
-import '../../../core/widgets/custom_button.dart';
+import '../../../core/utils/phone_utils.dart';
+import '../../../core/widgets/review_list.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/work_photo_gallery.dart';
-import '../../../models/user_profile_model.dart';
 import '../../../state/app_state.dart';
-import '../../customer/customer_main_screen.dart';
+import 'edit_worker_profile_screen.dart';
 
 class WorkerOwnProfileScreen extends StatelessWidget {
   const WorkerOwnProfileScreen({super.key});
@@ -17,16 +20,30 @@ class WorkerOwnProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
     final worker = appState.workerProfile;
+    final teams = appState.myTeams;
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('My Tradesperson Profile')),
+      appBar: AppBar(
+        title: Text(context.tr('My Worker Profile', 'میری کاریگر پروفائل')),
+        actions: [
+          if (appState.hasWorkerProfile)
+            IconButton(
+              tooltip: context.tr('Edit', 'ترمیم'),
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const EditWorkerProfileScreen(),
+                ),
+              ),
+            ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Profile Card
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -72,7 +89,7 @@ class WorkerOwnProfileScreen extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              worker.trade,
+                              context.tradeName(worker.trade),
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
@@ -81,7 +98,8 @@ class WorkerOwnProfileScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              worker.phone,
+                              PhoneUtils.display(worker.phone),
+                              textDirection: TextDirection.ltr,
                               style: const TextStyle(
                                 fontSize: 13,
                                 color: AppColors.secondaryText,
@@ -92,28 +110,29 @@ class WorkerOwnProfileScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  if (worker.isCnicVerified)
+                  if (worker.isCnicVerified) ...[
+                    const SizedBox(height: 16),
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         color: AppColors.lightMint,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Row(
+                      child: Row(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.verified_user_rounded,
                             color: AppColors.primary,
                             size: 20,
                           ),
-                          SizedBox(width: 8),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'CNIC Verified Status: Active',
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
+                              context.tr(
+                                'CNIC & face verified',
+                                'شناختی کارڈ اور چہرہ تصدیق شدہ',
+                              ),
+                              style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.darkGreen,
@@ -123,14 +142,12 @@ class WorkerOwnProfileScreen extends StatelessWidget {
                         ],
                       ),
                     ),
+                  ],
                 ],
               ),
             ),
-
             const SizedBox(height: 20),
-
-            // Bio & Details
-            const SectionHeader(title: 'Professional Bio'),
+            SectionHeader(title: context.tr('About my work', 'میرے کام کے بارے میں')),
             const SizedBox(height: 6),
             Container(
               padding: const EdgeInsets.all(16),
@@ -141,19 +158,23 @@ class WorkerOwnProfileScreen extends StatelessWidget {
                 border: Border.all(color: AppColors.border),
               ),
               child: Text(
-                worker.bio,
-                style: const TextStyle(
+                worker.bio.isEmpty
+                    ? context.tr(
+                        'Add a few lines about your work. Customers trust detailed profiles.',
+                        'اپنے کام کے بارے میں چند سطریں لکھیں۔ گاہک تفصیلی پروفائل پر بھروسہ کرتے ہیں۔',
+                      )
+                    : worker.bio,
+                style: TextStyle(
                   fontSize: 14,
-                  color: AppColors.primaryText,
+                  color: worker.bio.isEmpty
+                      ? AppColors.secondaryText
+                      : AppColors.primaryText,
                   height: 1.4,
                 ),
               ),
             ),
-
             const SizedBox(height: 20),
-
-            // Service Areas
-            const SectionHeader(title: 'Covered Service Areas'),
+            SectionHeader(title: context.tr('Areas I serve', 'میرے علاقے')),
             const SizedBox(height: 6),
             Wrap(
               spacing: 8,
@@ -165,7 +186,7 @@ class WorkerOwnProfileScreen extends StatelessWidget {
                     size: 14,
                     color: AppColors.primary,
                   ),
-                  label: Text(area),
+                  label: Text(context.areaName(area)),
                   backgroundColor: AppColors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
@@ -174,13 +195,46 @@ class WorkerOwnProfileScreen extends StatelessWidget {
                 );
               }).toList(),
             ),
-
+            if (teams.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              SectionHeader(title: context.tr('My teams', 'میری ٹیمیں')),
+              for (final team in teams)
+                Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    leading: const Icon(
+                      Icons.storefront_rounded,
+                      color: AppColors.darkGreen,
+                    ),
+                    title: Text(
+                      team.contractor?.businessName ??
+                          context.tr('Contractor', 'ٹھیکیدار'),
+                    ),
+                    trailing: TextButton(
+                      onPressed: () async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        try {
+                          await appState.leaveTeam(team.contractorId);
+                        } catch (error) {
+                          messenger.showSnackBar(
+                            SnackBar(content: Text(friendlyError(error))),
+                          );
+                        }
+                      },
+                      child: Text(
+                        context.tr('Leave', 'چھوڑ دیں'),
+                        style: const TextStyle(color: AppColors.statusRed),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
             const SizedBox(height: 24),
-
-            // Work Photo Gallery
             SectionHeader(
-              title:
-                  'Work Photos (${worker.workPhotos.length}/${AppConstants.maxWorkPhotos})',
+              title: context.tr(
+                'Work photos (${worker.workPhotos.length}/${AppConstants.maxWorkPhotos})',
+                'کام کی تصاویر (${worker.workPhotos.length}/${AppConstants.maxWorkPhotos})',
+              ),
             ),
             const SizedBox(height: 8),
             WorkPhotoGallery(
@@ -191,95 +245,15 @@ class WorkerOwnProfileScreen extends StatelessWidget {
               },
               onDelete: appState.deleteWorkPhoto,
             ),
-
             const SizedBox(height: 24),
-
-            // Customer Reviews List
-            SectionHeader(title: 'Customer Reviews (${worker.reviews.length})'),
-            const SizedBox(height: 8),
-            if (worker.reviews.isEmpty)
-              Container(
-                padding: const EdgeInsets.all(20),
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: const Text(
-                  'No reviews yet.',
-                  style: TextStyle(color: AppColors.secondaryText),
-                ),
-              )
-            else
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: worker.reviews.length,
-                itemBuilder: (context, index) {
-                  final review = worker.reviews[index];
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppColors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                review.customerName,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '${review.rating} ★',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.ratingAccent,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          review.comment,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: AppColors.primaryText,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+            SectionHeader(
+              title: context.tr(
+                'Customer reviews (${worker.reviews.length})',
+                'گاہکوں کے ریویوز (${worker.reviews.length})',
               ),
-
-            const SizedBox(height: 32),
-
-            CustomButton(
-              text: 'Switch to Customer Mode',
-              type: ButtonType.outline,
-              onPressed: () {
-                appState.setUserRole(UserRole.customer);
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const CustomerMainScreen()),
-                  (route) => false,
-                );
-              },
             ),
+            const SizedBox(height: 8),
+            ReviewList(reviews: worker.reviews),
             const SizedBox(height: 20),
           ],
         ),

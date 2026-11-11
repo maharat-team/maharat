@@ -19,4 +19,15 @@ class AuthService {
       _auth.verifyOTP(type: OtpType.email, email: email, token: code);
 
   Future<void> signOut() => _auth.signOut();
+
+  /// Permanently deletes the account and everything it owns, then signs out.
+  Future<void> deleteAccount() async {
+    await SupabaseConfig.client.rpc('delete_my_account');
+    try {
+      await _auth.signOut();
+    } catch (_) {
+      // The user no longer exists, so the server may refuse the sign-out;
+      // the local session is cleared either way.
+    }
+  }
 }

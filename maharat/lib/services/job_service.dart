@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/config/supabase_config.dart';
 import '../models/job_request_model.dart';
+import 'contractor_service.dart';
 import 'storage_service.dart';
 import 'worker_service.dart';
 
@@ -11,14 +13,22 @@ class JobService {
 
   final StorageService _storage;
 
+  // reviews links job_requests to contractors too, so the direct relation is
+  // named to keep the embed unambiguous.
   static const _select =
       '*, job_interests(created_at, workers(${WorkerService.selectColumns})), '
-      'reviews(rating, comment)';
+      'reviews(rating, comment), '
+      'job_locations(lat, lng, address_details), '
+      'contractors!job_requests_contractor_id_fkey(*), '
+      'job_assignments(assigned_at, workers(${WorkerService.selectColumns}))';
 
   SupabaseClient get _client => SupabaseConfig.client;
 
-  JobRequestModel _parse(Map<String, dynamic> json) =>
-      JobRequestModel.fromJson(json, parseWorker: WorkerService.parse);
+  JobRequestModel _parse(Map<String, dynamic> json) => JobRequestModel.fromJson(
+    json,
+    parseWorker: WorkerService.parse,
+    parseContractor: ContractorService.parse,
+  );
 
   Future<List<JobRequestModel>> _withPhotoUrls(
     List<JobRequestModel> jobs,
@@ -54,6 +64,7 @@ class JobService {
   }
 
   /// Open jobs in the worker's trade and service areas, excluding their own.
+  /// Orders sent to a contractor are private to that contractor.
   Future<List<JobRequestModel>> fetchNearbyJobs({
     required String userId,
     required String trade,
@@ -64,6 +75,7 @@ class JobService {
         .select(_select)
         .eq('status', 'active')
         .eq('trade', trade)
+        .isFilter('contractor_id', null)
         .inFilter('location', serviceAreas)
         .neq('customer_id', userId)
         .order('created_at', ascending: false)
@@ -71,23 +83,66 @@ class JobService {
     return _withPhotoUrls(rows.map(_parse).toList());
   }
 
+  /// Orders customers sent to this contractor's shop.
+  Future<List<JobRequestModel>> fetchContractorOrders(
+    String contractorId,
+  ) async {
+    final rows = await _client
+        .from('job_requests')
+        .select(_select)
+        .eq('contractor_id', contractorId)
+        .order('created_at', ascending: false)
+        .limit(100);
+    return _withPhotoUrls(rows.map(_parse).toList());
+  }
+
+  /// Jobs a contractor has sent this worker to.
+  Future<List<JobRequestModel>> fetchAssignedJobs(String workerId) async {
+    final assignments = await _client
+        .from('job_assignments')
+        .select('job_id')
+        .eq('worker_id', workerId)
+        .order('assigned_at', ascending: false)
+        .limit(50);
+    final ids = assignments.map((a) => a['job_id'] as String).toList();
+    if (ids.isEmpty) return const [];
+    final rows = await _client
+        .from('job_requests')
+        .select(_select)
+        .inFilter('id', ids)
+        .order('created_at', ascending: false);
+    return _withPhotoUrls(rows.map(_parse).toList());
+  }
+
+  /// Posts a job with its exact pin in one transaction.
   Future<JobRequestModel> create({
     required String trade,
     required String description,
     required String location,
     required String urgency,
     required List<String> photoPaths,
+    String? contractorId,
+    LatLng? point,
+    String addressDetails = '',
   }) async {
+    final id = await _client.rpc(
+      'post_job',
+      params: {
+        'p_trade': trade,
+        'p_description': description,
+        'p_location': location,
+        'p_urgency': JobRequestModel.urgencyToDb(urgency),
+        'p_photo_paths': photoPaths,
+        'p_contractor_id': contractorId,
+        'p_lat': point?.latitude,
+        'p_lng': point?.longitude,
+        'p_address_details': addressDetails,
+      },
+    );
     final row = await _client
         .from('job_requests')
-        .insert({
-          'trade': trade,
-          'description': description,
-          'location': location,
-          'urgency': JobRequestModel.urgencyToDb(urgency),
-          'photo_paths': photoPaths,
-        })
         .select(_select)
+        .eq('id', id as String)
         .single();
     return (await _withPhotoUrls([_parse(row)])).first;
   }
@@ -99,10 +154,12 @@ class JobService {
         .eq('id', jobId);
   }
 
-  Future<void> complete(String jobId, String workerId) async {
+  /// [workerId] is required for jobs sent to all workers and must be null for
+  /// contractor orders, where the contractor's team did the work.
+  Future<void> complete(String jobId, String? workerId) async {
     await _client
         .from('job_requests')
-        .update({'status': 'completed', 'assigned_worker_id': workerId})
+        .update({'status': 'completed', 'assigned_worker_id': ?workerId})
         .eq('id', jobId);
   }
 
@@ -113,16 +170,35 @@ class JobService {
     });
   }
 
-  /// Calls [onChange] whenever a visible interest row appears. RLS scopes
-  /// delivery, so a customer only hears about their own jobs.
-  Object subscribeToInterests(VoidCallback onChange) {
+  /// Calls [onChange] when jobs, interests, assignments or team invitations
+  /// change. RLS scopes delivery, so users only hear about their own rows.
+  Object subscribeToChanges(VoidCallback onChange) {
+    void notify(PostgresChangePayload _) => onChange();
     return _client
-        .channel('job-interests')
+        .channel('maharat-changes')
         .onPostgresChanges(
           event: PostgresChangeEvent.insert,
           schema: 'public',
           table: 'job_interests',
-          callback: (_) => onChange(),
+          callback: notify,
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'job_requests',
+          callback: notify,
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'job_assignments',
+          callback: notify,
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'contractor_members',
+          callback: notify,
         )
         .subscribe();
   }

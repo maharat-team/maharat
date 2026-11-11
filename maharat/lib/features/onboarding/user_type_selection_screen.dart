@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/l10n/l10n.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/custom_button.dart';
 import '../../models/user_profile_model.dart';
@@ -21,12 +22,7 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
+      appBar: AppBar(),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -40,18 +36,24 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'How will you use Maharat?',
-                        style: TextStyle(
+                      Text(
+                        context.tr(
+                          'How will you use Maharat?',
+                          'آپ مہارت کیسے استعمال کریں گے؟',
+                        ),
+                        style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                           color: AppColors.primaryText,
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const Text(
-                        'Select your profile type to customize your app experience.',
-                        style: TextStyle(
+                      Text(
+                        context.tr(
+                          'You can switch later from your profile.',
+                          'آپ بعد میں پروفائل سے تبدیل کر سکتے ہیں۔',
+                        ),
+                        style: const TextStyle(
                           fontSize: 14,
                           color: AppColors.secondaryText,
                         ),
@@ -59,25 +61,40 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
                       const SizedBox(height: 28),
                       _buildRoleCard(
                         role: UserRole.customer,
-                        title: 'I need a worker',
-                        urduTitle: 'مجھے کاریگر چاہیے',
-                        description:
-                            'Find plumber, electrician, carpenter, AC tech & more nearby in Bahawalpur.',
+                        title: context.tr('I need a worker', 'مجھے کاریگر چاہیے'),
+                        description: context.tr(
+                          'Find a plumber, electrician, carpenter, AC technician and more near you in Bahawalpur.',
+                          'بہاولپور میں اپنے قریب پلمبر، الیکٹریشن، بڑھئی، اے سی ٹیکنیشن وغیرہ تلاش کریں۔',
+                        ),
                         icon: Icons.search_rounded,
                       ),
                       const SizedBox(height: 16),
                       _buildRoleCard(
                         role: UserRole.worker,
-                        title: 'I am a worker',
-                        urduTitle: 'میں کاریگر ہوں',
-                        description:
-                            'Offer your tradesperson services to local households. 0% commission, direct calls.',
+                        title: context.tr('I am a worker', 'میں کاریگر ہوں'),
+                        description: context.tr(
+                          'Offer your skills to local households. 0% commission, direct calls.',
+                          'مقامی گھرانوں کو اپنی خدمات پیش کریں۔ کوئی کمیشن نہیں، براہ راست کالز۔',
+                        ),
                         icon: Icons.engineering_rounded,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildRoleCard(
+                        role: UserRole.contractor,
+                        title: context.tr(
+                          'I run a shop / I am a contractor',
+                          'میری دکان ہے / میں ٹھیکیدار ہوں',
+                        ),
+                        description: context.tr(
+                          'Get your shop verified, receive orders and send workers from your team.',
+                          'اپنی دکان کی تصدیق کروائیں، آرڈر وصول کریں اور اپنی ٹیم سے کاریگر بھیجیں۔',
+                        ),
+                        icon: Icons.storefront_rounded,
                       ),
                       const Spacer(),
                       const SizedBox(height: 24),
                       CustomButton(
-                        text: 'Continue',
+                        text: context.tr('Continue', 'آگے بڑھیں'),
                         onPressed: () {
                           final appState = Provider.of<AppState>(
                             context,
@@ -106,20 +123,15 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
   Widget _buildRoleCard({
     required UserRole role,
     required String title,
-    required String urduTitle,
     required String description,
     required IconData icon,
   }) {
     final isSelected = _selectedRole == role;
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedRole = role;
-        });
-      },
+      onTap: () => setState(() => _selectedRole = role),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(20),
@@ -135,8 +147,8 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
                     offset: const Offset(0, 4),
                   ),
                 ]
-              : [
-                  const BoxShadow(
+              : const [
+                  BoxShadow(
                     color: AppColors.shadow,
                     blurRadius: 4,
                     offset: Offset(0, 2),
@@ -147,24 +159,23 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: isSelected ? AppColors.lightMint : AppColors.background,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Icon(
                 icon,
-                size: 32,
+                size: 30,
                 color: isSelected ? AppColors.primary : AppColors.secondaryText,
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
                         child: Text(
@@ -172,7 +183,7 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            fontSize: 18,
+                            fontSize: 17,
                             fontWeight: FontWeight.bold,
                             color: AppColors.primaryText,
                           ),
@@ -204,17 +215,7 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    urduTitle,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
-                      fontFamily: 'NotoSansArabic',
-                    ),
-                  ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Text(
                     description,
                     style: const TextStyle(

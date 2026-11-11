@@ -1,7 +1,11 @@
+import '../l10n/l10n.dart';
+
 /// Pakistani mobile numbers, stored as +92XXXXXXXXXX.
 class PhoneUtils {
-  static const invalidMessage =
-      'Enter a valid mobile number, e.g. 0300 1234567';
+  static String get invalidMessage => tr(
+    'Enter a valid mobile number, e.g. 0300 1234567',
+    'درست موبائل نمبر درج کریں، مثلاً 0300 1234567',
+  );
 
   /// Accepts 03001234567, 3001234567, 923001234567 and +92 300 1234567.
   /// Returns null when the input is not a valid mobile number.
@@ -15,4 +19,10 @@ class PhoneUtils {
 
   static String? validate(String? input) =>
       normalize(input ?? '') == null ? invalidMessage : null;
+
+  /// +923001234567 -> 0300 1234567, the way people in Pakistan write it.
+  static String display(String stored) {
+    if (!stored.startsWith('+92') || stored.length != 13) return stored;
+    return '0${stored.substring(3, 6)} ${stored.substring(6)}';
+  }
 }

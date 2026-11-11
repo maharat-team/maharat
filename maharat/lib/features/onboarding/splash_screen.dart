@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/l10n/l10n.dart';
 import '../../core/theme/app_colors.dart';
 import '../../routes/session_router.dart';
 import '../../state/app_state.dart';
@@ -110,27 +111,26 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ),
                   const SizedBox(height: 24),
-                  // Urdu Title
-                  const Text(
-                    'مہارت',
-                    style: TextStyle(
-                      fontSize: 42,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.white,
-                      fontFamily: 'NotoSansArabic',
+                  // The wordmark follows the chosen language.
+                  if (context.isUrdu)
+                    const Text(
+                      'مہارت',
+                      style: TextStyle(
+                        fontSize: 42,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.white,
+                      ),
+                    )
+                  else
+                    const Text(
+                      'MAHARAT',
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 4,
+                        color: AppColors.white,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  // English Title
-                  const Text(
-                    'MAHARAT',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 4,
-                      color: AppColors.lightMint,
-                    ),
-                  ),
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -141,9 +141,12 @@ class _SplashScreenState extends State<SplashScreen>
                       color: AppColors.white.withAlpha(20),
                       borderRadius: BorderRadius.circular(30),
                     ),
-                    child: const Text(
-                      'Bahawalpur\'s Local Service Platform',
-                      style: TextStyle(
+                    child: Text(
+                      context.tr(
+                        "Bahawalpur's Local Service Platform",
+                        'بہاولپور کا مقامی سروس پلیٹ فارم',
+                      ),
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                         color: AppColors.white,
@@ -151,11 +154,13 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ),
                   const SizedBox(height: 32),
-                  // Tagline
-                  const Text(
-                    'Verified local tradespeople.\nFree for everyone. No commission.',
+                  Text(
+                    context.tr(
+                      'Verified local tradespeople.\nFree for everyone. No commission.',
+                      'تصدیق شدہ مقامی کاریگر۔\nسب کے لیے مفت۔ کوئی کمیشن نہیں۔',
+                    ),
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 14,
                       color: AppColors.lightMint,
                       height: 1.5,
@@ -165,9 +170,12 @@ class _SplashScreenState extends State<SplashScreen>
                   if (_hasFailed)
                     TextButton(
                       onPressed: _start,
-                      child: const Text(
-                        'Could not connect. Tap to retry.',
-                        style: TextStyle(color: AppColors.white),
+                      child: Text(
+                        context.tr(
+                          'Could not connect. Tap to retry.',
+                          'رابطہ نہیں ہو سکا۔ دوبارہ کوشش کے لیے ٹیپ کریں۔',
+                        ),
+                        style: const TextStyle(color: AppColors.white),
                       ),
                     )
                   else

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/worker_model.dart';
 import '../constants/app_constants.dart';
+import '../l10n/l10n.dart';
 import '../theme/app_colors.dart';
 import '../utils/error_messages.dart';
 import 'network_photo.dart';
@@ -44,17 +45,17 @@ class _WorkPhotoGalleryState extends State<WorkPhotoGallery> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Remove this photo?'),
+        title: Text(ctx.tr('Remove this photo?', 'یہ تصویر ہٹا دیں؟')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(ctx.tr('Cancel', 'منسوخ')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
-              'Remove',
-              style: TextStyle(color: AppColors.statusRed),
+            child: Text(
+              ctx.tr('Remove', 'ہٹائیں'),
+              style: const TextStyle(color: AppColors.statusRed),
             ),
           ),
         ],
@@ -68,7 +69,7 @@ class _WorkPhotoGalleryState extends State<WorkPhotoGallery> {
       onTap: _isBusy ? null : () => _run(widget.onAdd!),
       child: Container(
         width: 110,
-        margin: const EdgeInsets.only(right: 12),
+        margin: const EdgeInsetsDirectional.only(end: 12),
         decoration: BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(14),
@@ -86,18 +87,18 @@ class _WorkPhotoGalleryState extends State<WorkPhotoGallery> {
                     ),
                   ),
                 )
-              : const Column(
+              : Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.add_a_photo_outlined,
                       color: AppColors.primary,
                       size: 26,
                     ),
-                    SizedBox(height: 6),
+                    const SizedBox(height: 6),
                     Text(
-                      'Add Photo',
-                      style: TextStyle(
+                      context.tr('Add Photo', 'تصویر شامل کریں'),
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary,
@@ -112,14 +113,14 @@ class _WorkPhotoGalleryState extends State<WorkPhotoGallery> {
 
   Widget _buildPhoto(WorkPhoto photo) {
     return Padding(
-      padding: const EdgeInsets.only(right: 12),
+      padding: const EdgeInsetsDirectional.only(end: 12),
       child: Stack(
         children: [
           NetworkPhoto(url: photo.url, width: 130, height: 110),
           if (widget.onDelete != null)
-            Positioned(
+            PositionedDirectional(
               top: 4,
-              right: 4,
+              end: 4,
               child: GestureDetector(
                 onTap: _isBusy ? null : () => _confirmDelete(photo),
                 child: Container(
@@ -156,9 +157,12 @@ class _WorkPhotoGalleryState extends State<WorkPhotoGallery> {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.border),
         ),
-        child: const Text(
-          'No work photos added yet.',
-          style: TextStyle(color: AppColors.secondaryText, fontSize: 13),
+        child: Text(
+          context.tr(
+            'No work photos added yet.',
+            'ابھی تک کام کی کوئی تصویر نہیں لگائی گئی۔',
+          ),
+          style: const TextStyle(color: AppColors.secondaryText, fontSize: 13),
         ),
       );
     }

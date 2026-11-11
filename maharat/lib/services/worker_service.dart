@@ -1,4 +1,6 @@
+import 'package:latlong2/latlong.dart';
 import '../core/config/supabase_config.dart';
+import '../models/verification_info.dart';
 import '../models/worker_model.dart';
 import 'storage_service.dart';
 
@@ -10,6 +12,7 @@ class WorkerApplication {
   final int visitFee;
   final List<String> serviceAreas;
   final String cnicNumber;
+  final LatLng? baseLocation;
 
   const WorkerApplication({
     required this.trade,
@@ -19,6 +22,7 @@ class WorkerApplication {
     required this.visitFee,
     required this.serviceAreas,
     required this.cnicNumber,
+    this.baseLocation,
   });
 }
 
@@ -50,14 +54,19 @@ class WorkerService {
     return row == null ? null : parse(row);
   }
 
-  /// The reviewer's note when an application was rejected.
-  Future<String?> fetchRejectionReason(String userId) async {
+  /// The latest identity check: status, face score and any rejection reason.
+  Future<VerificationInfo?> fetchVerification(String userId) async {
     final row = await SupabaseConfig.client
         .from('cnic_verifications')
-        .select('rejection_reason')
+        .select('status, rejection_reason, rejection_code, face_match_score')
         .eq('worker_id', userId)
         .maybeSingle();
-    return row?['rejection_reason'] as String?;
+    return row == null ? null : VerificationInfo.fromJson(row);
+  }
+
+  /// Edits the fields a worker may change after registering.
+  Future<void> updateProfile(String userId, Map<String, dynamic> fields) async {
+    await SupabaseConfig.client.from('workers').update(fields).eq('id', userId);
   }
 
   Future<void> submitApplication(
@@ -79,6 +88,8 @@ class WorkerService {
         'p_front_path': frontPath,
         'p_back_path': backPath,
         'p_selfie_path': selfiePath,
+        'p_base_lat': application.baseLocation?.latitude,
+        'p_base_lng': application.baseLocation?.longitude,
       },
     );
   }

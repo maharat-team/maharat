@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../core/l10n/l10n.dart';
+import '../../../core/l10n/labels.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/request_card.dart';
 import '../../../core/widgets/state_views.dart';
+import '../../../models/job_request_model.dart';
 import '../../../state/app_state.dart';
 import '../reviews/rate_experience_screen.dart';
 import 'request_job_screen.dart';
@@ -40,13 +43,17 @@ class _MyRequestsTabState extends State<MyRequestsTab>
     final closedList = appState.closedJobRequests;
 
     final unratedCompleted = completedList
-        .where((j) => j.ratingGiven == null)
+        .where(
+          (j) =>
+              j.ratingGiven == null &&
+              (j.isContractorOrder || j.assignedWorkerId != null),
+        )
         .toList();
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('My Job Requests'),
+        title: Text(context.tr('My Requests', 'میری درخواستیں')),
         centerTitle: false,
         elevation: 0,
         actions: [
@@ -74,9 +81,24 @@ class _MyRequestsTabState extends State<MyRequestsTab>
             fontSize: 14,
           ),
           tabs: [
-            Tab(text: 'Active (${activeList.length})'),
-            Tab(text: 'Completed (${completedList.length})'),
-            Tab(text: 'Closed (${closedList.length})'),
+            Tab(
+              text: context.tr(
+                'Active (${activeList.length})',
+                'جاری (${activeList.length})',
+              ),
+            ),
+            Tab(
+              text: context.tr(
+                'Completed (${completedList.length})',
+                'مکمل (${completedList.length})',
+              ),
+            ),
+            Tab(
+              text: context.tr(
+                'Closed (${closedList.length})',
+                'بند (${closedList.length})',
+              ),
+            ),
           ],
         ),
       ),
@@ -102,7 +124,10 @@ class _MyRequestsTabState extends State<MyRequestsTab>
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Pending Review: Please rate your recent ${unratedCompleted.first.tradeCategory} service.',
+                        context.tr(
+                          'Please rate your recent ${unratedCompleted.first.tradeCategory} service.',
+                          'براہ کرم اپنی حالیہ ${context.tradeName(unratedCompleted.first.tradeCategory)} سروس کو ریٹ کریں۔',
+                        ),
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -110,9 +135,9 @@ class _MyRequestsTabState extends State<MyRequestsTab>
                         ),
                       ),
                     ),
-                    const Text(
-                      'Rate Now',
-                      style: TextStyle(
+                    Text(
+                      context.tr('Rate Now', 'ابھی ریٹ کریں'),
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary,
@@ -135,10 +160,19 @@ class _MyRequestsTabState extends State<MyRequestsTab>
               children: [
                 _buildRequestList(
                   activeList,
-                  'No active job requests right now.',
+                  context.tr(
+                    'No active requests right now.',
+                    'ابھی کوئی جاری درخواست نہیں۔',
+                  ),
                 ),
-                _buildRequestList(completedList, 'No completed jobs yet.'),
-                _buildRequestList(closedList, 'No closed job requests.'),
+                _buildRequestList(
+                  completedList,
+                  context.tr('No completed jobs yet.', 'ابھی کوئی کام مکمل نہیں ہوا۔'),
+                ),
+                _buildRequestList(
+                  closedList,
+                  context.tr('No closed requests.', 'کوئی بند درخواست نہیں۔'),
+                ),
               ],
             ),
           ),
@@ -153,7 +187,7 @@ class _MyRequestsTabState extends State<MyRequestsTab>
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.white,
         icon: const Icon(Icons.add_rounded),
-        label: const Text('New Request'),
+        label: Text(context.tr('New Request', 'نئی درخواست')),
       ),
     );
   }
@@ -161,17 +195,19 @@ class _MyRequestsTabState extends State<MyRequestsTab>
   Future<void> _closeRequest(BuildContext context, String jobId) async {
     final appState = Provider.of<AppState>(context, listen: false);
     final messenger = ScaffoldMessenger.of(context);
+    final closed = context.tr('Request closed.', 'درخواست بند ہو گئی۔');
     try {
       await appState.closeJobRequest(jobId);
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Job request closed.')),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(closed)));
     } catch (error) {
       messenger.showSnackBar(SnackBar(content: Text(friendlyError(error))));
     }
   }
 
-  Widget _buildRequestList(List requests, String emptyMessage) {
+  Widget _buildRequestList(
+    List<JobRequestModel> requests,
+    String emptyMessage,
+  ) {
     final appState = Provider.of<AppState>(context);
     if (requests.isEmpty && appState.jobRequests.isEmpty) {
       if (appState.jobsStatus == LoadStatus.loading ||
@@ -180,7 +216,12 @@ class _MyRequestsTabState extends State<MyRequestsTab>
       }
       if (appState.jobsStatus == LoadStatus.error) {
         return ErrorRetryView(
-          message: appState.jobsError ?? 'Could not load your requests.',
+          message:
+              appState.jobsError ??
+              context.tr(
+                'Could not load your requests.',
+                'آپ کی درخواستیں لوڈ نہیں ہو سکیں۔',
+              ),
           onRetry: appState.refreshJobs,
         );
       }
@@ -199,6 +240,7 @@ class _MyRequestsTabState extends State<MyRequestsTab>
             const SizedBox(height: 16),
             Text(
               emptyMessage,
+              textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 14,
                 color: AppColors.secondaryText,
@@ -219,19 +261,20 @@ class _MyRequestsTabState extends State<MyRequestsTab>
           return RequestCard(
             request: request,
             onTap: () {
-              if (request.status == 'Active') {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => RequestSentScreen(request: request),
-                  ),
-                );
-              }
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => RequestSentScreen(request: request),
+                ),
+              );
             },
             onCloseTap: request.status == 'Active'
                 ? () => _closeRequest(context, request.id)
                 : null,
             onRateTap:
-                request.status == 'Completed' && request.ratingGiven == null
+                request.status == 'Completed' &&
+                    request.ratingGiven == null &&
+                    (request.isContractorOrder ||
+                        request.assignedWorkerId != null)
                 ? () => _openRateScreen(context, request)
                 : null,
           );
@@ -240,7 +283,7 @@ class _MyRequestsTabState extends State<MyRequestsTab>
     );
   }
 
-  void _openRateScreen(BuildContext context, request) {
+  void _openRateScreen(BuildContext context, JobRequestModel request) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => RateExperienceScreen(jobRequest: request),

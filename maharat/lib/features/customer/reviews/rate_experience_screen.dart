@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/l10n/l10n.dart';
+import '../../../core/l10n/labels.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/custom_button.dart';
@@ -30,8 +32,8 @@ class _RateExperienceScreenState extends State<RateExperienceScreen> {
   }
 
   Future<void> _submitReview() async {
-    final workerId = widget.jobRequest.assignedWorkerId;
-    if (workerId == null) return;
+    final job = widget.jobRequest;
+    if (!job.isContractorOrder && job.assignedWorkerId == null) return;
 
     setState(() {
       _isSubmitting = true;
@@ -39,17 +41,21 @@ class _RateExperienceScreenState extends State<RateExperienceScreen> {
 
     final appState = Provider.of<AppState>(context, listen: false);
     try {
-      await appState.addReviewToWorker(
-        workerId: workerId,
-        jobId: widget.jobRequest.id,
+      await appState.addReview(
+        job: job,
         rating: _rating,
         comment: _commentController.text.trim(),
         tags: _selectedTags.toList(),
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Thank you! Review submitted successfully.'),
+        SnackBar(
+          content: Text(
+            context.tr(
+              'Thank you! Your review has been submitted.',
+              'شکریہ! آپ کا ریویو جمع ہو گیا۔',
+            ),
+          ),
         ),
       );
       Navigator.of(context).pop();
@@ -66,12 +72,15 @@ class _RateExperienceScreenState extends State<RateExperienceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final workerName =
-        widget.jobRequest.assignedWorkerName ?? 'your tradesperson';
+    final job = widget.jobRequest;
+    final workerName = job.isContractorOrder
+        ? (job.contractor?.businessName ?? context.tr('the shop', 'دکان'))
+        : (job.assignedWorkerName ??
+              context.tr('your tradesperson', 'آپ کے کاریگر'));
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Rate Experience')),
+      appBar: AppBar(title: Text(context.tr('Rate Experience', 'تجربہ ریٹ کریں'))),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -103,7 +112,10 @@ class _RateExperienceScreenState extends State<RateExperienceScreen> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'How was your work with $workerName?',
+                    context.tr(
+                      'How was your work with $workerName?',
+                      '$workerName کے ساتھ آپ کا تجربہ کیسا رہا؟',
+                    ),
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -113,7 +125,7 @@ class _RateExperienceScreenState extends State<RateExperienceScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Category: ${widget.jobRequest.tradeCategory} • ${widget.jobRequest.location}',
+                    '${context.tradeName(job.tradeCategory)} • ${context.areaName(job.location)}',
                     style: const TextStyle(
                       fontSize: 13,
                       color: AppColors.secondaryText,
@@ -129,9 +141,9 @@ class _RateExperienceScreenState extends State<RateExperienceScreen> {
             const SizedBox(height: 28),
 
             // Interactive Star Rating Selector
-            const Text(
-              'Tap Stars to Rate',
-              style: TextStyle(
+            Text(
+              context.tr('Tap stars to rate', 'ریٹنگ کے لیے ستاروں پر ٹیپ کریں'),
+              style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: AppColors.primaryText,
@@ -174,11 +186,11 @@ class _RateExperienceScreenState extends State<RateExperienceScreen> {
             const SizedBox(height: 28),
 
             // Review Tags Selection
-            const Align(
-              alignment: Alignment.centerLeft,
+            Align(
+              alignment: AlignmentDirectional.centerStart,
               child: Text(
-                'What went well? Select tags:',
-                style: TextStyle(
+                context.tr('What went well?', 'کیا اچھا رہا؟'),
+                style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                   color: AppColors.primaryText,
@@ -192,7 +204,7 @@ class _RateExperienceScreenState extends State<RateExperienceScreen> {
               children: AppConstants.reviewTags.map((tag) {
                 final isSelected = _selectedTags.contains(tag);
                 return FilterChip(
-                  label: Text(tag),
+                  label: Text(context.tagName(tag)),
                   selected: isSelected,
                   selectedColor: AppColors.lightMint,
                   checkmarkColor: AppColors.primary,
@@ -228,9 +240,11 @@ class _RateExperienceScreenState extends State<RateExperienceScreen> {
 
             // Written Comment Box
             CustomTextField(
-              label: 'Written Review (Optional)',
-              hint:
-                  'Write your experience with the worker to help others in Bahawalpur...',
+              label: context.tr('Written review (optional)', 'تحریری ریویو (اختیاری)'),
+              hint: context.tr(
+                'Share your experience to help others in Bahawalpur...',
+                'بہاولپور کے دوسرے لوگوں کی مدد کے لیے اپنا تجربہ لکھیں...',
+              ),
               controller: _commentController,
               maxLines: 4,
             ),
@@ -238,7 +252,7 @@ class _RateExperienceScreenState extends State<RateExperienceScreen> {
             const SizedBox(height: 32),
 
             CustomButton(
-              text: 'Submit Review',
+              text: context.tr('Submit Review', 'ریویو جمع کریں'),
               isLoading: _isSubmitting,
               onPressed: _submitReview,
             ),
@@ -249,10 +263,10 @@ class _RateExperienceScreenState extends State<RateExperienceScreen> {
   }
 
   String _getRatingText(double rating) {
-    if (rating >= 5.0) return '5.0 - Excellent!';
-    if (rating >= 4.0) return '4.0 - Very Good';
-    if (rating >= 3.0) return '3.0 - Good';
-    if (rating >= 2.0) return '2.0 - Fair';
-    return '1.0 - Poor';
+    if (rating >= 5.0) return context.tr('5.0 - Excellent!', '5.0 - بہترین!');
+    if (rating >= 4.0) return context.tr('4.0 - Very good', '4.0 - بہت اچھا');
+    if (rating >= 3.0) return context.tr('3.0 - Good', '3.0 - اچھا');
+    if (rating >= 2.0) return context.tr('2.0 - Fair', '2.0 - ٹھیک');
+    return context.tr('1.0 - Poor', '1.0 - خراب');
   }
 }

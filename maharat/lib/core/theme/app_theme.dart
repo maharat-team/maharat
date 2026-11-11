@@ -3,7 +3,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
 class AppTheme {
-  static ThemeData get lightTheme {
+  static ThemeData get lightTheme => forLanguage(urdu: false);
+
+  /// Urdu uses Noto Naskh Arabic, which renders Urdu clearly at UI sizes and
+  /// keeps line heights close to the English layout.
+  static ThemeData forLanguage({required bool urdu}) {
     return ThemeData(
       useMaterial3: true,
       scaffoldBackgroundColor: AppColors.background,
@@ -16,7 +20,9 @@ class AppTheme {
         onSecondary: AppColors.white,
         onSurface: AppColors.primaryText,
       ),
-      textTheme: GoogleFonts.interTextTheme(),
+      textTheme: urdu
+          ? GoogleFonts.notoNaskhArabicTextTheme()
+          : GoogleFonts.interTextTheme(),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.background,
         elevation: 0,

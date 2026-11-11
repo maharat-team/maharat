@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import '../theme/app_colors.dart';
 
 class LoadingView extends StatelessWidget {
@@ -98,7 +99,10 @@ class ErrorRetryView extends StatelessWidget {
                 color: AppColors.secondaryText,
               ),
             ),
-            TextButton(onPressed: onRetry, child: const Text('Try Again')),
+            TextButton(
+              onPressed: onRetry,
+              child: Text(context.tr('Try Again', 'دوبارہ کوشش کریں')),
+            ),
           ],
         ),
       ),

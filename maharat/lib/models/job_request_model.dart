@@ -1,4 +1,10 @@
+import 'package:latlong2/latlong.dart';
+import '../core/utils/geo.dart';
+import 'contractor_model.dart';
 import 'worker_model.dart';
+
+/// A contractor's reply to an order sent to their shop.
+enum OrderStatus { pending, accepted, declined }
 
 class JobRequestModel {
   final String id;
@@ -16,6 +22,24 @@ class JobRequestModel {
   final double? ratingGiven;
   final String? reviewComment;
   final String? assignedWorkerId;
+
+  /// Set when the job was sent to one contractor instead of all workers.
+  final String? contractorId;
+  final OrderStatus? orderStatus;
+  final ContractorModel? contractor;
+
+  /// Workers the contractor sent.
+  final List<WorkerModel> assignedTeam;
+
+  /// Rounded (about 1 km) point, visible to anyone who can see the job.
+  final LatLng? approxLocation;
+
+  /// The exact pin, visible only to the people working the job.
+  final LatLng? exactLocation;
+  final String addressDetails;
+
+  /// Shared with the contractor and their workers on contractor orders.
+  final String? customerPhone;
 
   static const _urgencyLabels = {
     'today': 'Today',
@@ -44,25 +68,50 @@ class JobRequestModel {
     this.ratingGiven,
     this.reviewComment,
     this.assignedWorkerId,
+    this.contractorId,
+    this.orderStatus,
+    this.contractor,
+    this.assignedTeam = const [],
+    this.approxLocation,
+    this.exactLocation,
+    this.addressDetails = '',
+    this.customerPhone,
   });
 
   static String urgencyToDb(String label) =>
       _urgencyLabels.entries.firstWhere((e) => e.value == label).key;
 
-  /// [parseWorker] builds a worker from the embedded row.
+  bool get isContractorOrder => contractorId != null;
+  bool get isActive => status == 'Active';
+
+  /// The best point known for this job.
+  LatLng? get mapLocation => exactLocation ?? approxLocation;
+
+  /// PostgREST embeds one-to-one relations as an object and others as a list.
+  static Map<String, dynamic>? _single(Object? embedded) {
+    if (embedded is List) {
+      return embedded.isEmpty ? null : embedded.first as Map<String, dynamic>;
+    }
+    return embedded as Map<String, dynamic>?;
+  }
+
+  /// [parseWorker] and [parseContractor] build the embedded rows.
   factory JobRequestModel.fromJson(
     Map<String, dynamic> json, {
     required WorkerModel Function(Map<String, dynamic>) parseWorker,
+    ContractorModel Function(Map<String, dynamic>)? parseContractor,
   }) {
     final interests = List<Map<String, dynamic>>.from(
       json['job_interests'] as List? ?? const [],
     )..sort((a, b) => '${a['created_at']}'.compareTo('${b['created_at']}'));
+    final assignments = List<Map<String, dynamic>>.from(
+      json['job_assignments'] as List? ?? const [],
+    );
 
-    // reviews.job_id is unique, so PostgREST may embed one object, not a list.
-    final embedded = json['reviews'];
-    final review = embedded is List
-        ? (embedded.isEmpty ? null : embedded.first as Map<String, dynamic>)
-        : embedded as Map<String, dynamic>?;
+    final review = _single(json['reviews']);
+    final exact = _single(json['job_locations']);
+    final contractorRow = _single(json['contractors']);
+    final orderStatus = json['contractor_status'] as String?;
 
     return JobRequestModel(
       id: json['id'] as String,
@@ -83,6 +132,23 @@ class JobRequestModel {
       ratingGiven: (review?['rating'] as num?)?.toDouble(),
       reviewComment: review?['comment'] as String?,
       assignedWorkerId: json['assigned_worker_id'] as String?,
+      contractorId: json['contractor_id'] as String?,
+      orderStatus: orderStatus == null
+          ? null
+          : OrderStatus.values.byName(orderStatus),
+      contractor: contractorRow == null || parseContractor == null
+          ? null
+          : parseContractor(contractorRow),
+      assignedTeam: assignments
+          .where((a) => a['workers'] != null)
+          .map((a) => parseWorker(a['workers'] as Map<String, dynamic>))
+          .toList(),
+      approxLocation: latLngOrNull(json['approx_lat'], json['approx_lng']),
+      exactLocation: exact == null
+          ? null
+          : latLngOrNull(exact['lat'], exact['lng']),
+      addressDetails: exact?['address_details'] as String? ?? '',
+      customerPhone: json['customer_phone'] as String?,
     );
   }
 
@@ -100,6 +166,8 @@ class JobRequestModel {
     double? ratingGiven,
     String? reviewComment,
     String? assignedWorkerId,
+    OrderStatus? orderStatus,
+    List<WorkerModel>? assignedTeam,
   }) {
     return JobRequestModel(
       id: id,
@@ -117,6 +185,14 @@ class JobRequestModel {
       ratingGiven: ratingGiven ?? this.ratingGiven,
       reviewComment: reviewComment ?? this.reviewComment,
       assignedWorkerId: assignedWorkerId ?? this.assignedWorkerId,
+      contractorId: contractorId,
+      orderStatus: orderStatus ?? this.orderStatus,
+      contractor: contractor,
+      assignedTeam: assignedTeam ?? this.assignedTeam,
+      approxLocation: approxLocation,
+      exactLocation: exactLocation,
+      addressDetails: addressDetails,
+      customerPhone: customerPhone,
     );
   }
 }

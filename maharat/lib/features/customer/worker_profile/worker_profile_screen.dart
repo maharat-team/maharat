@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../core/l10n/l10n.dart';
+import '../../../core/l10n/labels.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/utils/contact_launcher.dart';
+import '../../../core/utils/geo.dart';
+import '../../../core/widgets/contact_dialog.dart';
 import '../../../core/widgets/custom_button.dart';
+import '../../../core/widgets/review_list.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/work_photo_gallery.dart';
 import '../../../models/worker_model.dart';
+import '../../../state/app_state.dart';
 
 class WorkerProfileScreen extends StatelessWidget {
   final WorkerModel worker;
@@ -13,29 +19,17 @@ class WorkerProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final appState = Provider.of<AppState>(context);
+    final km = distanceBetween(appState.myLocation, worker.baseLocation);
+
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Worker Profile'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.share_outlined),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Profile link for ${worker.name} copied!'),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
+      appBar: AppBar(title: Text(context.tr('Worker Profile', 'کاریگر کی پروفائل'))),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top Profile Summary Card
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -54,7 +48,6 @@ class WorkerProfileScreen extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      // Avatar Container
                       Container(
                         width: 72,
                         height: 72,
@@ -68,7 +61,7 @@ class WorkerProfileScreen extends StatelessWidget {
                         ),
                         child: Center(
                           child: Text(
-                            _getInitials(worker.name),
+                            _initials(worker.name),
                             style: const TextStyle(
                               fontSize: 26,
                               fontWeight: FontWeight.bold,
@@ -82,23 +75,17 @@ class WorkerProfileScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    worker.name,
-                                    style: const TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.primaryText,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                            Text(
+                              worker.name,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primaryText,
+                              ),
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              worker.trade,
+                              context.tradeName(worker.trade),
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -116,21 +103,24 @@ class WorkerProfileScreen extends StatelessWidget {
                                   color: AppColors.lightMint,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: const Row(
+                                child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(
+                                    const Icon(
                                       Icons.verified_rounded,
                                       size: 16,
                                       color: AppColors.primary,
                                     ),
-                                    SizedBox(width: 4),
+                                    const SizedBox(width: 4),
                                     Flexible(
                                       child: Text(
-                                        'CNIC Verified Tradesperson',
+                                        context.tr(
+                                          'CNIC & face verified',
+                                          'شناختی کارڈ اور چہرہ تصدیق شدہ',
+                                        ),
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
                                           color: AppColors.darkGreen,
@@ -148,24 +138,28 @@ class WorkerProfileScreen extends StatelessWidget {
                   const SizedBox(height: 20),
                   const Divider(height: 1, color: AppColors.border),
                   const SizedBox(height: 16),
-                  // Key Stats Row
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       Expanded(
                         child: _buildStatItem(
                           icon: Icons.star_rounded,
                           iconColor: AppColors.ratingAccent,
                           title: '${worker.rating}',
-                          subtitle: '${worker.reviewCount} reviews',
+                          subtitle: context.tr(
+                            '${worker.reviewCount} reviews',
+                            '${worker.reviewCount} ریویوز',
+                          ),
                         ),
                       ),
                       Expanded(
                         child: _buildStatItem(
                           icon: Icons.work_history_rounded,
                           iconColor: AppColors.primary,
-                          title: '${worker.experienceYears} Years',
-                          subtitle: 'Experience',
+                          title: context.tr(
+                            '${worker.experienceYears} years',
+                            '${worker.experienceYears} سال',
+                          ),
+                          subtitle: context.tr('Experience', 'تجربہ'),
                         ),
                       ),
                       Expanded(
@@ -173,54 +167,46 @@ class WorkerProfileScreen extends StatelessWidget {
                           icon: Icons.payments_rounded,
                           iconColor: AppColors.darkGreen,
                           title: worker.visitFee == 0
-                              ? 'Free'
-                              : 'Rs. ${worker.visitFee}',
-                          subtitle: 'Visit Fee',
+                              ? context.tr('Free', 'مفت')
+                              : context.tr(
+                                  'Rs. ${worker.visitFee}',
+                                  '${worker.visitFee} روپے',
+                                ),
+                          subtitle: context.tr('Visit fee', 'وزٹ فیس'),
                         ),
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // No Commission Information Banner
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.lightMint,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.primary.withAlpha(50)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.info_outline_rounded,
-                    color: AppColors.darkGreen,
-                    size: 22,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'No Commission Platform: Call or WhatsApp ${worker.name} directly to negotiate rates and schedule service.',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.darkGreen,
-                        height: 1.4,
-                        fontWeight: FontWeight.w500,
-                      ),
+                  if (km != null) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.near_me_rounded,
+                          size: 16,
+                          color: AppColors.primary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          context.tr(
+                            'About ${context.distance(km)}',
+                            'تقریباً ${context.distance(km)}',
+                          ),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
-
             const SizedBox(height: 20),
-
-            // Bio / About
-            const SectionHeader(title: 'About Tradesperson'),
+            SectionHeader(title: context.tr('About', 'تعارف')),
             const SizedBox(height: 6),
             Container(
               padding: const EdgeInsets.all(16),
@@ -233,7 +219,10 @@ class WorkerProfileScreen extends StatelessWidget {
               child: Text(
                 worker.bio.isNotEmpty
                     ? worker.bio
-                    : 'Professional ${worker.trade} based in ${worker.neighbourhood}, Bahawalpur.',
+                    : context.tr(
+                        'Professional ${worker.trade} based in ${worker.neighbourhood}, Bahawalpur.',
+                        '${context.areaName(worker.neighbourhood)}، بہاولپور میں پیشہ ور ${context.tradeName(worker.trade)}۔',
+                      ),
                 style: const TextStyle(
                   fontSize: 14,
                   color: AppColors.primaryText,
@@ -241,11 +230,8 @@ class WorkerProfileScreen extends StatelessWidget {
                 ),
               ),
             ),
-
             const SizedBox(height: 20),
-
-            // Service Areas
-            const SectionHeader(title: 'Service Areas in Bahawalpur'),
+            SectionHeader(title: context.tr('Service areas', 'خدمت کے علاقے')),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -257,7 +243,7 @@ class WorkerProfileScreen extends StatelessWidget {
                     size: 14,
                     color: AppColors.primary,
                   ),
-                  label: Text(area),
+                  label: Text(context.areaName(area)),
                   backgroundColor: AppColors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
@@ -270,128 +256,20 @@ class WorkerProfileScreen extends StatelessWidget {
                 );
               }).toList(),
             ),
-
             const SizedBox(height: 20),
-
-            // Work Photo Gallery
-            const SectionHeader(title: 'Sample Work Gallery'),
+            SectionHeader(title: context.tr('Work photos', 'کام کی تصاویر')),
             const SizedBox(height: 8),
             WorkPhotoGallery(photos: worker.workPhotos),
-
             const SizedBox(height: 20),
-
-            // Customer Reviews Section
-            SectionHeader(title: 'Customer Reviews (${worker.reviews.length})'),
-            const SizedBox(height: 8),
-            if (worker.reviews.isEmpty)
-              Container(
-                padding: const EdgeInsets.all(20),
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: const Text(
-                  'No written reviews yet.',
-                  style: TextStyle(
-                    color: AppColors.secondaryText,
-                    fontSize: 13,
-                  ),
-                ),
-              )
-            else
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: worker.reviews.length,
-                itemBuilder: (context, index) {
-                  final review = worker.reviews[index];
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              review.customerName,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primaryText,
-                              ),
-                            ),
-                            Text(
-                              review.date,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: AppColors.secondaryText,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: List.generate(
-                            5,
-                            (starIndex) => Icon(
-                              starIndex < review.rating.floor()
-                                  ? Icons.star_rounded
-                                  : Icons.star_border_rounded,
-                              size: 16,
-                              color: AppColors.ratingAccent,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          review.comment,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: AppColors.primaryText,
-                            height: 1.4,
-                          ),
-                        ),
-                        if (review.tags.isNotEmpty) ...[
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 6,
-                            children: review.tags.map((tag) {
-                              return Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.lightMint,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  tag,
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.darkGreen,
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ],
-                      ],
-                    ),
-                  );
-                },
+            SectionHeader(
+              title: context.tr(
+                'Customer reviews (${worker.reviews.length})',
+                'گاہکوں کے ریویوز (${worker.reviews.length})',
               ),
-            const SizedBox(height: 80), // bottom space for fixed action bar
+            ),
+            const SizedBox(height: 8),
+            ReviewList(reviews: worker.reviews),
+            const SizedBox(height: 80), // space for the fixed action bar
           ],
         ),
       ),
@@ -411,18 +289,30 @@ class WorkerProfileScreen extends StatelessWidget {
           children: [
             Expanded(
               child: CustomButton(
-                text: 'WhatsApp',
+                text: context.tr('WhatsApp', 'واٹس ایپ'),
                 icon: Icons.chat_bubble_outline_rounded,
                 backgroundColor: AppColors.whatsappGreen,
-                onPressed: () => _openContactDialog(context, isWhatsApp: true),
+                onPressed: () => showContactDialog(
+                  context,
+                  name: worker.name,
+                  subtitle: context.tradeName(worker.trade),
+                  phone: worker.phone,
+                  isWhatsApp: true,
+                ),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: CustomButton(
-                text: 'Call Worker',
+                text: context.tr('Call', 'کال کریں'),
                 icon: Icons.call_outlined,
-                onPressed: () => _openContactDialog(context, isWhatsApp: false),
+                onPressed: () => showContactDialog(
+                  context,
+                  name: worker.name,
+                  subtitle: context.tradeName(worker.trade),
+                  phone: worker.phone,
+                  isWhatsApp: false,
+                ),
               ),
             ),
           ],
@@ -463,84 +353,13 @@ class WorkerProfileScreen extends StatelessWidget {
     );
   }
 
-  String _getInitials(String name) {
-    final parts = name.trim().split(' ');
-    if (parts.length >= 2) {
+  String _initials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.length >= 2 && parts[0].isNotEmpty && parts[1].isNotEmpty) {
       return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
     } else if (parts.isNotEmpty && parts[0].isNotEmpty) {
       return parts[0][0].toUpperCase();
     }
     return 'W';
-  }
-
-  void _openContactDialog(BuildContext context, {required bool isWhatsApp}) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Icon(
-              isWhatsApp ? Icons.chat_bubble_rounded : Icons.call_rounded,
-              color: isWhatsApp ? AppColors.whatsappGreen : AppColors.primary,
-            ),
-            const SizedBox(width: 8),
-            Text(isWhatsApp ? 'WhatsApp Contact' : 'Direct Call'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Connect directly with ${worker.name}',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Phone Number: ${worker.phone}',
-              style: const TextStyle(
-                color: AppColors.primaryText,
-                fontSize: 15,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.lightMint,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Text(
-                'Maharat platform is free for everyone. Deal directly with tradesperson.',
-                style: TextStyle(fontSize: 12, color: AppColors.darkGreen),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isWhatsApp
-                  ? AppColors.whatsappGreen
-                  : AppColors.primary,
-            ),
-            onPressed: () {
-              Navigator.pop(ctx);
-              contactWorker(
-                context,
-                phone: worker.phone,
-                isWhatsApp: isWhatsApp,
-              );
-            },
-            child: Text(isWhatsApp ? 'Open WhatsApp' : 'Call Now'),
-          ),
-        ],
-      ),
-    );
   }
 }

@@ -1,12 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/l10n/l10n.dart';
+import '../../../core/l10n/labels.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/utils/contact_launcher.dart';
+import '../../../core/utils/geo.dart';
+import '../../../core/widgets/contact_dialog.dart';
+import '../../../core/widgets/contractor_card.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../../core/widgets/worker_card.dart';
+import '../../../models/contractor_model.dart';
+import '../../../models/worker_model.dart';
 import '../../../state/app_state.dart';
+import '../contractor_profile/contractor_profile_screen.dart';
 import '../worker_profile/worker_profile_screen.dart';
+
+enum _SortBy { rating, nearest, experience, visitFee }
 
 class FindWorkersTab extends StatefulWidget {
   const FindWorkersTab({super.key});
@@ -17,11 +26,11 @@ class FindWorkersTab extends StatefulWidget {
 
 class _FindWorkersTabState extends State<FindWorkersTab> {
   final TextEditingController _searchController = TextEditingController();
+  bool _showContractors = false;
   String _selectedCategory = 'All';
   String _selectedNeighbourhood = 'All';
-  double _minRating = 0.0;
   bool _availableTodayOnly = false;
-  String _sortBy = 'Rating'; // 'Rating', 'Experience', 'Visit Fee'
+  _SortBy _sortBy = _SortBy.rating;
 
   @override
   void dispose() {
@@ -29,71 +38,154 @@ class _FindWorkersTabState extends State<FindWorkersTab> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final appState = Provider.of<AppState>(context);
-    final allWorkers = appState.workers;
+  String _sortLabel(_SortBy sort) => switch (sort) {
+    _SortBy.rating => context.tr('Rating', 'ریٹنگ'),
+    _SortBy.nearest => context.tr('Nearest', 'قریب ترین'),
+    _SortBy.experience => context.tr('Experience', 'تجربہ'),
+    _SortBy.visitFee => context.tr('Visit fee', 'وزٹ فیس'),
+  };
 
-    // Filtering logic
-    List filteredWorkers = allWorkers.where((worker) {
-      // Category filter
-      if (_selectedCategory != 'All' &&
-          worker.trade.toLowerCase() != _selectedCategory.toLowerCase()) {
+  bool _matchesQuery(List<String> fields) {
+    final query = _searchController.text.trim().toLowerCase();
+    if (query.isEmpty) return true;
+    return fields.any((f) => f.toLowerCase().contains(query));
+  }
+
+  List<WorkerModel> _filteredWorkers(AppState appState) {
+    final here = appState.myLocation;
+    final list = appState.workers.where((worker) {
+      if (_selectedCategory != 'All' && worker.trade != _selectedCategory) {
         return false;
       }
-      // Search query
-      final query = _searchController.text.trim().toLowerCase();
-      if (query.isNotEmpty) {
-        final matchesName = worker.name.toLowerCase().contains(query);
-        final matchesTrade = worker.trade.toLowerCase().contains(query);
-        final matchesArea = worker.neighbourhood.toLowerCase().contains(query);
-        if (!matchesName && !matchesTrade && !matchesArea) return false;
+      if (!_matchesQuery([
+        worker.name,
+        worker.trade,
+        Labels.trades[worker.trade] ?? '',
+        worker.neighbourhood,
+        Labels.areas[worker.neighbourhood] ?? '',
+      ])) {
+        return false;
       }
-      // Neighbourhood filter
       if (_selectedNeighbourhood != 'All' &&
-          worker.neighbourhood != _selectedNeighbourhood) {
+          !worker.serviceAreas.contains(_selectedNeighbourhood)) {
         return false;
       }
-      // Rating filter
-      if (worker.rating < _minRating) return false;
-      // Availability filter
       if (_availableTodayOnly && !worker.isAvailableToday) return false;
-
       return true;
     }).toList();
 
-    // Sorting logic
-    if (_sortBy == 'Rating') {
-      filteredWorkers.sort((a, b) => b.rating.compareTo(a.rating));
-    } else if (_sortBy == 'Experience') {
-      filteredWorkers.sort(
-        (a, b) => b.experienceYears.compareTo(a.experienceYears),
-      );
-    } else if (_sortBy == 'Visit Fee') {
-      filteredWorkers.sort((a, b) => a.visitFee.compareTo(b.visitFee));
+    switch (_sortBy) {
+      case _SortBy.rating:
+        list.sort((a, b) => b.rating.compareTo(a.rating));
+      case _SortBy.experience:
+        list.sort((a, b) => b.experienceYears.compareTo(a.experienceYears));
+      case _SortBy.visitFee:
+        list.sort((a, b) => a.visitFee.compareTo(b.visitFee));
+      case _SortBy.nearest:
+        double key(WorkerModel w) =>
+            distanceBetween(here, w.baseLocation) ?? double.infinity;
+        list.sort((a, b) => key(a).compareTo(key(b)));
     }
+    return list;
+  }
+
+  List<ContractorModel> _filteredContractors(AppState appState) {
+    final here = appState.myLocation;
+    final list = appState.contractors.where((shop) {
+      if (_selectedCategory != 'All' &&
+          !shop.trades.contains(_selectedCategory)) {
+        return false;
+      }
+      if (!_matchesQuery([
+        shop.businessName,
+        shop.ownerName,
+        ...shop.trades,
+        ...shop.trades.map((t) => Labels.trades[t] ?? ''),
+        shop.neighbourhood,
+      ])) {
+        return false;
+      }
+      if (_selectedNeighbourhood != 'All' &&
+          !shop.serviceAreas.contains(_selectedNeighbourhood)) {
+        return false;
+      }
+      return true;
+    }).toList();
+
+    if (_sortBy == _SortBy.nearest) {
+      double key(ContractorModel c) =>
+          distanceBetween(here, c.location) ?? double.infinity;
+      list.sort((a, b) => key(a).compareTo(key(b)));
+    } else {
+      list.sort((a, b) => b.rating.compareTo(a.rating));
+    }
+    return list;
+  }
+
+  void _reset() {
+    setState(() {
+      _searchController.clear();
+      _selectedCategory = 'All';
+      _selectedNeighbourhood = 'All';
+      _availableTodayOnly = false;
+      _sortBy = _SortBy.rating;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final appState = Provider.of<AppState>(context);
+    final here = appState.myLocation;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Find Local Workers'),
+        title: Text(context.tr('Find Help', 'تلاش کریں')),
         centerTitle: false,
         elevation: 0,
       ),
       body: Column(
         children: [
-          // Search & Filters Header Container
           Container(
             color: AppColors.background,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: Column(
               children: [
-                // Search Bar
+                SizedBox(
+                  width: double.infinity,
+                  child: SegmentedButton<bool>(
+                    segments: [
+                      ButtonSegment(
+                        value: false,
+                        icon: const Icon(Icons.engineering_rounded, size: 18),
+                        label: Text(context.tr('Workers', 'کاریگر')),
+                      ),
+                      ButtonSegment(
+                        value: true,
+                        icon: const Icon(Icons.storefront_rounded, size: 18),
+                        label: Text(context.tr('Shops', 'دکانیں')),
+                      ),
+                    ],
+                    selected: {_showContractors},
+                    showSelectedIcon: false,
+                    onSelectionChanged: (value) =>
+                        setState(() => _showContractors = value.first),
+                  ),
+                ),
+                const SizedBox(height: 10),
                 TextField(
                   controller: _searchController,
                   onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(
-                    hintText: 'Search plumber, electrician, name...',
+                    hintText: _showContractors
+                        ? context.tr(
+                            'Search shop name, trade...',
+                            'دکان کا نام، کام تلاش کریں...',
+                          )
+                        : context.tr(
+                            'Search plumber, electrician, name...',
+                            'پلمبر، الیکٹریشن، نام تلاش کریں...',
+                          ),
                     prefixIcon: const Icon(
                       Icons.search_rounded,
                       color: AppColors.secondaryText,
@@ -119,9 +211,7 @@ class _FindWorkersTabState extends State<FindWorkersTab> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
-
-                // Category Horizontal Chips
+                const SizedBox(height: 10),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -133,17 +223,15 @@ class _FindWorkersTabState extends State<FindWorkersTab> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 10),
-
-                // Secondary filter controls wrap into additional rows on narrow screens.
+                const SizedBox(height: 8),
                 LayoutBuilder(
                   builder: (context, constraints) {
-                    final areaWidth = constraints.maxWidth < 240
+                    final areaWidth = constraints.maxWidth < 220
                         ? constraints.maxWidth
-                        : 240.0;
-                    final sortWidth = constraints.maxWidth < 170
+                        : 220.0;
+                    final sortWidth = constraints.maxWidth < 180
                         ? constraints.maxWidth
-                        : 170.0;
+                        : 180.0;
                     return Wrap(
                       spacing: 8,
                       runSpacing: 8,
@@ -151,55 +239,71 @@ class _FindWorkersTabState extends State<FindWorkersTab> {
                       children: [
                         SizedBox(
                           width: areaWidth,
-                          child: _buildFilterDropdown(
+                          child: _buildFilterDropdown<String>(
                             value: _selectedNeighbourhood,
                             options: [
                               'All',
                               ...AppConstants.bahawalpurNeighbourhoods,
                             ],
-                            labelBuilder: (area) =>
-                                area == 'All' ? 'All Areas' : area,
+                            labelBuilder: (area) => area == 'All'
+                                ? context.tr('All areas', 'تمام علاقے')
+                                : context.areaName(area),
                             onChanged: (value) =>
                                 setState(() => _selectedNeighbourhood = value),
                           ),
                         ),
                         SizedBox(
                           width: sortWidth,
-                          child: _buildFilterDropdown(
+                          child: _buildFilterDropdown<_SortBy>(
                             value: _sortBy,
-                            options: const [
-                              'Rating',
-                              'Experience',
-                              'Visit Fee',
-                            ],
-                            labelBuilder: (sort) => 'Sort: $sort',
+                            options: _showContractors
+                                ? const [_SortBy.rating, _SortBy.nearest]
+                                : _SortBy.values,
+                            labelBuilder: (sort) => context.tr(
+                              'Sort: ${_sortLabel(sort)}',
+                              'ترتیب: ${_sortLabel(sort)}',
+                            ),
                             icon: Icons.sort_rounded,
-                            onChanged: (value) =>
-                                setState(() => _sortBy = value),
+                            onChanged: (value) {
+                              if (value == _SortBy.nearest && here == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      context.tr(
+                                        'Add your home location in Profile to sort by distance.',
+                                        'فاصلے کے لحاظ سے ترتیب کے لیے پروفائل میں گھر کا مقام شامل کریں۔',
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }
+                              setState(() => _sortBy = value);
+                            },
                           ),
                         ),
-                        FilterChip(
-                          selected: _availableTodayOnly,
-                          label: const Text(
-                            'Available Today',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
+                        if (!_showContractors)
+                          FilterChip(
+                            selected: _availableTodayOnly,
+                            label: Text(
+                              context.tr('Available today', 'آج دستیاب'),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            selectedColor: AppColors.lightMint,
+                            checkmarkColor: AppColors.primary,
+                            onSelected: (value) =>
+                                setState(() => _availableTodayOnly = value),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              side: BorderSide(
+                                color: _availableTodayOnly
+                                    ? AppColors.primary
+                                    : AppColors.border,
+                              ),
                             ),
                           ),
-                          selectedColor: AppColors.lightMint,
-                          checkmarkColor: AppColors.primary,
-                          onSelected: (value) =>
-                              setState(() => _availableTodayOnly = value),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            side: BorderSide(
-                              color: _availableTodayOnly
-                                  ? AppColors.primary
-                                  : AppColors.border,
-                            ),
-                          ),
-                        ),
                       ],
                     );
                   },
@@ -207,72 +311,142 @@ class _FindWorkersTabState extends State<FindWorkersTab> {
               ],
             ),
           ),
-
-          // Worker Results List
           Expanded(
-            child: allWorkers.isEmpty
-                ? _buildNoDataState(appState)
-                : filteredWorkers.isEmpty
-                ? _buildEmptyState()
-                : RefreshIndicator(
-                    onRefresh: appState.refreshWorkers,
-                    child: ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: filteredWorkers.length,
-                      itemBuilder: (context, index) {
-                        final worker = filteredWorkers[index];
-                        return WorkerCard(
-                          worker: worker,
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    WorkerProfileScreen(worker: worker),
-                              ),
-                            );
-                          },
-                          onWhatsAppTap: () =>
-                              _openContactDialog(context, worker, true),
-                          onCallTap: () =>
-                              _openContactDialog(context, worker, false),
-                        );
-                      },
-                    ),
-                  ),
+            child: _showContractors
+                ? _buildContractorList(appState)
+                : _buildWorkerList(appState),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildNoDataState(AppState appState) {
-    switch (appState.workersStatus) {
+  Widget _buildWorkerList(AppState appState) {
+    if (appState.workers.isEmpty) {
+      return _buildNoDataState(
+        status: appState.workersStatus,
+        error: appState.workersError,
+        onRetry: appState.refreshWorkers,
+        emptyTitle: context.tr(
+          'No verified workers yet',
+          'ابھی کوئی تصدیق شدہ کاریگر نہیں',
+        ),
+      );
+    }
+    final workers = _filteredWorkers(appState);
+    if (workers.isEmpty) return _buildEmptyState();
+    final here = appState.myLocation;
+    return RefreshIndicator(
+      onRefresh: appState.refreshWorkers,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: workers.length,
+        itemBuilder: (context, index) {
+          final worker = workers[index];
+          return WorkerCard(
+            worker: worker,
+            distanceKm: distanceBetween(here, worker.baseLocation),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => WorkerProfileScreen(worker: worker),
+              ),
+            ),
+            onWhatsAppTap: () => showContactDialog(
+              context,
+              name: worker.name,
+              subtitle: context.tradeName(worker.trade),
+              phone: worker.phone,
+              isWhatsApp: true,
+            ),
+            onCallTap: () => showContactDialog(
+              context,
+              name: worker.name,
+              subtitle: context.tradeName(worker.trade),
+              phone: worker.phone,
+              isWhatsApp: false,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildContractorList(AppState appState) {
+    if (appState.contractors.isEmpty) {
+      return _buildNoDataState(
+        status: appState.contractorsStatus,
+        error: appState.contractorsError,
+        onRetry: appState.refreshContractors,
+        emptyTitle: context.tr(
+          'No verified shops yet',
+          'ابھی کوئی تصدیق شدہ دکان نہیں',
+        ),
+      );
+    }
+    final shops = _filteredContractors(appState);
+    if (shops.isEmpty) return _buildEmptyState();
+    final here = appState.myLocation;
+    return RefreshIndicator(
+      onRefresh: appState.refreshContractors,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: shops.length,
+        itemBuilder: (context, index) {
+          final shop = shops[index];
+          return ContractorCard(
+            contractor: shop,
+            distanceKm: distanceBetween(here, shop.location),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ContractorProfileScreen(contractor: shop),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildNoDataState({
+    required LoadStatus status,
+    required String? error,
+    required Future<void> Function() onRetry,
+    required String emptyTitle,
+  }) {
+    switch (status) {
       case LoadStatus.idle:
       case LoadStatus.loading:
         return const LoadingView();
       case LoadStatus.error:
         return ErrorRetryView(
-          message: appState.workersError ?? 'Could not load workers.',
-          onRetry: appState.refreshWorkers,
+          message:
+              error ?? context.tr('Could not load.', 'لوڈ نہیں ہو سکا۔'),
+          onRetry: onRetry,
         );
       case LoadStatus.ready:
-        return const EmptyStateView(
+        return EmptyStateView(
           icon: Icons.engineering_outlined,
-          title: 'No verified workers yet',
-          subtitle: 'Verified tradespeople will appear here as they join.',
+          title: emptyTitle,
+          subtitle: context.tr(
+            'They will appear here as they join and get verified.',
+            'شامل ہونے اور تصدیق کے بعد یہاں نظر آئیں گے۔',
+          ),
         );
     }
   }
 
-  Widget _buildCategoryChip(String label) {
-    final isSelected = _selectedCategory == label;
+  Widget _buildCategoryChip(String value) {
+    final isSelected = _selectedCategory == value;
     return Padding(
-      padding: const EdgeInsets.only(right: 6),
+      padding: const EdgeInsetsDirectional.only(end: 6),
       child: ChoiceChip(
-        label: Text(label),
+        label: Text(
+          value == 'All' ? context.tr('All', 'سب') : context.tradeName(value),
+        ),
         selected: isSelected,
         selectedColor: AppColors.primary,
         backgroundColor: AppColors.white,
+        showCheckmark: false,
         labelStyle: TextStyle(
           color: isSelected ? AppColors.white : AppColors.primaryText,
           fontSize: 12,
@@ -285,25 +459,21 @@ class _FindWorkersTabState extends State<FindWorkersTab> {
           ),
         ),
         onSelected: (selected) {
-          if (selected) {
-            setState(() {
-              _selectedCategory = label;
-            });
-          }
+          if (selected) setState(() => _selectedCategory = value);
         },
       ),
     );
   }
 
-  Widget _buildFilterDropdown({
-    required String value,
-    required List<String> options,
-    required String Function(String) labelBuilder,
-    required ValueChanged<String> onChanged,
+  Widget _buildFilterDropdown<T>({
+    required T value,
+    required List<T> options,
+    required String Function(T) labelBuilder,
+    required ValueChanged<T> onChanged,
     IconData? icon,
   }) {
     return Container(
-      height: 38,
+      height: 40,
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         color: AppColors.white,
@@ -311,8 +481,8 @@ class _FindWorkersTabState extends State<FindWorkersTab> {
         border: Border.all(color: AppColors.border),
       ),
       child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
+        child: DropdownButton<T>(
+          value: options.contains(value) ? value : options.first,
           isExpanded: true,
           icon: Icon(
             icon ?? Icons.arrow_drop_down_rounded,
@@ -326,7 +496,7 @@ class _FindWorkersTabState extends State<FindWorkersTab> {
           ),
           items: options
               .map(
-                (option) => DropdownMenuItem<String>(
+                (option) => DropdownMenuItem<T>(
                   value: option,
                   child: Text(
                     labelBuilder(option),
@@ -346,117 +516,48 @@ class _FindWorkersTabState extends State<FindWorkersTab> {
 
   Widget _buildEmptyState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.search_off_rounded,
-            size: 64,
-            color: AppColors.secondaryText.withAlpha(120),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'No Workers Found',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppColors.primaryText,
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Try adjusting your search criteria or area filter.',
-            style: TextStyle(fontSize: 13, color: AppColors.secondaryText),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              minimumSize: const Size(140, 40),
-            ),
-            onPressed: () {
-              setState(() {
-                _searchController.clear();
-                _selectedCategory = 'All';
-                _selectedNeighbourhood = 'All';
-                _availableTodayOnly = false;
-                _minRating = 0.0;
-              });
-            },
-            child: const Text('Reset Filters'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _openContactDialog(BuildContext context, worker, bool isWhatsApp) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              isWhatsApp ? Icons.chat_bubble_rounded : Icons.call_rounded,
-              color: isWhatsApp ? AppColors.whatsappGreen : AppColors.primary,
+              Icons.search_off_rounded,
+              size: 64,
+              color: AppColors.secondaryText.withAlpha(120),
             ),
-            const SizedBox(width: 8),
-            Text(isWhatsApp ? 'WhatsApp Contact' : 'Direct Call'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+            const SizedBox(height: 16),
             Text(
-              'Connect directly with ${worker.name} (${worker.trade})',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Phone: ${worker.phone}',
+              context.tr('Nothing found', 'کچھ نہیں ملا'),
               style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
                 color: AppColors.primaryText,
-                fontSize: 15,
               ),
             ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.lightMint,
-                borderRadius: BorderRadius.circular(12),
+            const SizedBox(height: 6),
+            Text(
+              context.tr(
+                'Try a different search or area.',
+                'کوئی اور تلاش یا علاقہ آزمائیں۔',
               ),
-              child: const Text(
-                'Maharat charges 0% commission. Contact worker directly!',
-                style: TextStyle(fontSize: 12, color: AppColors.darkGreen),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.secondaryText,
               ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                minimumSize: const Size(140, 40),
+              ),
+              onPressed: _reset,
+              child: Text(context.tr('Reset filters', 'فلٹر ری سیٹ کریں')),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isWhatsApp
-                  ? AppColors.whatsappGreen
-                  : AppColors.primary,
-            ),
-            onPressed: () {
-              Navigator.pop(ctx);
-              contactWorker(
-                context,
-                phone: worker.phone,
-                isWhatsApp: isWhatsApp,
-              );
-            },
-            child: Text(isWhatsApp ? 'Open WhatsApp' : 'Call Now'),
-          ),
-        ],
       ),
     );
   }

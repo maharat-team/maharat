@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/worker_model.dart';
+import '../l10n/l10n.dart';
+import '../l10n/labels.dart';
 import '../theme/app_colors.dart';
 
 class WorkerCard extends StatelessWidget {
@@ -8,12 +10,16 @@ class WorkerCard extends StatelessWidget {
   final VoidCallback onWhatsAppTap;
   final VoidCallback onCallTap;
 
+  /// Kilometres from the viewer, when both locations are known.
+  final double? distanceKm;
+
   const WorkerCard({
     super.key,
     required this.worker,
     required this.onTap,
     required this.onWhatsAppTap,
     required this.onCallTap,
+    this.distanceKm,
   });
 
   @override
@@ -99,18 +105,18 @@ class WorkerCard extends StatelessWidget {
                                     color: AppColors.lightMint,
                                     borderRadius: BorderRadius.circular(6),
                                   ),
-                                  child: const Row(
+                                  child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(
+                                      const Icon(
                                         Icons.verified_rounded,
                                         size: 14,
                                         color: AppColors.primary,
                                       ),
-                                      SizedBox(width: 3),
+                                      const SizedBox(width: 3),
                                       Text(
-                                        'CNIC',
-                                        style: TextStyle(
+                                        context.tr('Verified', 'تصدیق شدہ'),
+                                        style: const TextStyle(
                                           fontSize: 10,
                                           fontWeight: FontWeight.bold,
                                           color: AppColors.darkGreen,
@@ -123,7 +129,7 @@ class WorkerCard extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            worker.trade,
+                            context.tradeName(worker.trade),
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -170,7 +176,7 @@ class WorkerCard extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                '${worker.experienceYears} yrs exp',
+                                context.yearsExperience(worker.experienceYears),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
@@ -203,7 +209,10 @@ class WorkerCard extends StatelessWidget {
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
-                                worker.neighbourhood,
+                                distanceKm == null
+                                    ? context.areaName(worker.neighbourhood)
+                                    : '${context.areaName(worker.neighbourhood)} · '
+                                          '${context.distance(distanceKm!)}',
                                 style: const TextStyle(
                                   fontSize: 12,
                                   color: AppColors.secondaryText,
@@ -226,8 +235,11 @@ class WorkerCard extends StatelessWidget {
                             Flexible(
                               child: Text(
                                 worker.visitFee == 0
-                                    ? 'Free Visit'
-                                    : 'Visit Fee: Rs. ${worker.visitFee}',
+                                    ? context.visitFee(0)
+                                    : context.tr(
+                                        'Visit fee: Rs. ${worker.visitFee}',
+                                        'وزٹ فیس: ${worker.visitFee} روپے',
+                                      ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -261,18 +273,18 @@ class WorkerCard extends StatelessWidget {
                                 color: AppColors.whatsappGreen.withAlpha(80),
                               ),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(
+                                const Icon(
                                   Icons.chat_bubble_outline_rounded,
                                   size: 16,
                                   color: AppColors.whatsappGreen,
                                 ),
-                                SizedBox(width: 4),
+                                const SizedBox(width: 4),
                                 Text(
-                                  'WhatsApp',
-                                  style: TextStyle(
+                                  context.tr('WhatsApp', 'واٹس ایپ'),
+                                  style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
                                     color: AppColors.whatsappGreen,
@@ -309,7 +321,7 @@ class WorkerCard extends StatelessWidget {
                           details,
                           const SizedBox(height: 8),
                           Align(
-                            alignment: Alignment.centerRight,
+                            alignment: AlignmentDirectional.centerEnd,
                             child: actions,
                           ),
                         ],

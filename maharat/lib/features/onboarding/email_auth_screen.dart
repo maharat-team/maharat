@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import '../../core/l10n/l10n.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/error_messages.dart';
 import '../../core/widgets/custom_button.dart';
@@ -74,7 +75,12 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
 
   Future<void> _sendOtp({bool isResend = false}) async {
     if (!_emailPattern.hasMatch(_email)) {
-      _showMessage('Please enter a valid email address');
+      _showMessage(
+        context.tr(
+          'Please enter a valid email address',
+          'براہ کرم درست ای میل ایڈریس درج کریں',
+        ),
+      );
       return;
     }
 
@@ -91,7 +97,11 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
       });
       _clearCode();
       _startResendTimer();
-      if (isResend) _showMessage('A new code is on its way.');
+      if (isResend) {
+        _showMessage(
+          context.tr('A new code is on its way.', 'نیا کوڈ بھیج دیا گیا ہے۔'),
+        );
+      }
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -110,7 +120,12 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
   Future<void> _verifyOtp() async {
     final otp = _otpControllers.map((c) => c.text).join();
     if (otp.length < _codeLength) {
-      _showMessage('Please enter all $_codeLength digits of the code');
+      _showMessage(
+        context.tr(
+          'Please enter all $_codeLength digits of the code',
+          'براہ کرم کوڈ کے تمام $_codeLength ہندسے درج کریں',
+        ),
+      );
       return;
     }
 
@@ -190,22 +205,25 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Enter Your Email',
-          style: TextStyle(
+        Text(
+          context.tr('Enter Your Email', 'اپنا ای میل درج کریں'),
+          style: const TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
             color: AppColors.primaryText,
           ),
         ),
         const SizedBox(height: 8),
-        const Text(
-          'We will send a 6-digit verification code to your email.',
-          style: TextStyle(fontSize: 14, color: AppColors.secondaryText),
+        Text(
+          context.tr(
+            'We will send a 6-digit verification code to your email.',
+            'ہم آپ کے ای میل پر 6 ہندسوں کا تصدیقی کوڈ بھیجیں گے۔',
+          ),
+          style: const TextStyle(fontSize: 14, color: AppColors.secondaryText),
         ),
         const SizedBox(height: 32),
         CustomTextField(
-          label: 'Email Address',
+          label: context.tr('Email Address', 'ای میل ایڈریس'),
           hint: 'you@example.com',
           controller: _emailController,
           keyboardType: TextInputType.emailAddress,
@@ -219,14 +237,17 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppColors.primary.withAlpha(40)),
           ),
-          child: const Row(
+          child: Row(
             children: [
-              Icon(Icons.shield_outlined, color: AppColors.primary, size: 24),
-              SizedBox(width: 12),
+              const Icon(Icons.shield_outlined, color: AppColors.primary, size: 24),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Your email is only used to sign you in. Maharat is 100% free with no spam.',
-                  style: TextStyle(
+                  context.tr(
+                    'Your email is only used to sign you in. Maharat is 100% free with no spam.',
+                    'آپ کا ای میل صرف سائن ان کے لیے استعمال ہوتا ہے۔ مہارت مکمل مفت ہے، کوئی اسپام نہیں۔',
+                  ),
+                  style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.darkGreen,
                     height: 1.4,
@@ -238,7 +259,7 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
         ),
         const SizedBox(height: 40),
         CustomButton(
-          text: 'Send Verification Code',
+          text: context.tr('Send Verification Code', 'تصدیقی کوڈ بھیجیں'),
           isLoading: _isLoading,
           onPressed: _sendOtp,
         ),
@@ -250,9 +271,9 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Verification Code',
-          style: TextStyle(
+        Text(
+          context.tr('Verification Code', 'تصدیقی کوڈ'),
+          style: const TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
             color: AppColors.primaryText,
@@ -263,7 +284,7 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
           children: [
             Expanded(
               child: Text(
-                'Code sent to $_email',
+                context.tr('Code sent to $_email', 'کوڈ بھیجا گیا: $_email'),
                 style: const TextStyle(
                   fontSize: 14,
                   color: AppColors.secondaryText,
@@ -278,9 +299,9 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                   _isOtpSent = false;
                 });
               },
-              child: const Text(
-                'Change',
-                style: TextStyle(
+              child: Text(
+                context.tr('Change', 'تبدیل کریں'),
+                style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                   color: AppColors.primary,
@@ -291,6 +312,7 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
         ),
         const SizedBox(height: 36),
         Row(
+          textDirection: TextDirection.ltr,
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: List.generate(
             _codeLength,
@@ -338,7 +360,10 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
         Center(
           child: _timerSeconds > 0
               ? Text(
-                  'Resend code in ${_timerSeconds}s',
+                  context.tr(
+                    'Resend code in ${_timerSeconds}s',
+                    '$_timerSeconds سیکنڈ میں دوبارہ بھیجیں',
+                  ),
                   style: const TextStyle(
                     fontSize: 14,
                     color: AppColors.secondaryText,
@@ -346,9 +371,9 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                 )
               : TextButton(
                   onPressed: _isLoading ? null : () => _sendOtp(isResend: true),
-                  child: const Text(
-                    'Resend Code',
-                    style: TextStyle(
+                  child: Text(
+                    context.tr('Resend Code', 'کوڈ دوبارہ بھیجیں'),
+                    style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                       color: AppColors.primary,
@@ -357,15 +382,18 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                 ),
         ),
         const SizedBox(height: 12),
-        const Center(
+        Center(
           child: Text(
-            'Not there? Check your spam folder.',
-            style: TextStyle(fontSize: 12, color: AppColors.secondaryText),
+            context.tr(
+              'Not there? Check your spam folder.',
+              'نہیں ملا؟ اسپام فولڈر چیک کریں۔',
+            ),
+            style: const TextStyle(fontSize: 12, color: AppColors.secondaryText),
           ),
         ),
         const SizedBox(height: 28),
         CustomButton(
-          text: 'Verify & Proceed',
+          text: context.tr('Verify & Proceed', 'تصدیق کر کے آگے بڑھیں'),
           isLoading: _isLoading,
           onPressed: _verifyOtp,
         ),
